@@ -1,0 +1,49 @@
+---
+title: "MSDA R Bridge, Assignment 1"
+author: "Talha Muhammad"
+date: "Monday, June 18 2016"
+output: pdf_document
+
+---
+
+** Problem 1 **
+* Write a loop that calculates 12 factorial*
+```{r}
+fact <- function (x) {
+b=1
+  while (x>1){
+  y=x*(x-1)
+  x=x-2
+  b=b*y
+}
+return (b)
+}
+
+#calculate the factorial of 12
+fact(12)
+```
+**Problem 2**
+*Show how to create a numeric vector that contains the sequence 20 to 50 by 5*
+
+```{r}
+first.seq=seq(from=20, to=50, by=5)
+first.seq
+```
+
+**Problem 3**
+*Show how to take a trio of input numbers a, b and c and implement the quadratic equation*
+
+```{r}
+quad_func<-function(a,b,c) {
+  desc<-b^2-4*a*c
+  if(desc<0) {
+    return("complex")
+  }
+  else {
+    two<-(b+sqrt(desc))/(2*a)
+    one<-(b-sqrt(desc))/(2*a)
+    ans<-c(one,two)
+    return(ans)
+  }
+}
+quad_func(3,5,2)
