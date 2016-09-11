@@ -1,0 +1,100 @@
+---
+title: "Assignment 1 IS 607"
+author: "Talha Muhammad"
+date: "September 9, 2016"
+output: html_document
+---
+
+##### Step 1. Initial Setup 
+
+Load the different packages:
+
+```{r Setup, warning=FALSE,message=FALSE}
+library(bitops)
+library(stringr)
+library(XML)
+library(RCurl)
+library(RMySQL)
+library(reshape2)
+library(ggplot2)
+```
+
+```{r Input Output}
+inputdir="C:/Users/talha/Documents/Training/CUNY Classes/IS607/Week2"
+outputdir="C:/Users/talha/Documents/Training/CUNY Classes/IS607/Week2"
+```
+
+##### Step 2. Load URLs and Scrapped Data from the Web
+
+we load the data on movies from (the web) using BoxOffice Mojo
+
+```{r Load URLS}
+#load URLs
+box<-getURL("http://www.boxofficemojo.com/quarterly/?view=releasedate&yr=2016&quarter=Q3")
+# Parse the URLs
+box_parsed<-htmlParse(box,encoding="UTF-8")
+tables<-readHTMLTable(box_parsed,stringsAsFactors=FALSE)
+```
+
+##### Step 3. Clean the data
+
+The scrapped data require some cleaning and reformainting
+```{r}
+#Select and clean the different tables
+movie_table<-tables[[4]]
+str(movie_table)
+# clean and name the different columns
+movie_table<-movie_table[2:101,]
+colnames(movie_table)<-c("Rank","Title","Studio","Gross_Q3","Total_Theaters","Opening","Open_theatre","Open_date","close_date")
+
+# all the data are strings and need to be converted to numeric
+movie_table$Gross_Q3<-str_replace_all(movie_table$Gross_Q3,"[$,]","")
+movie_table$Opening<-str_replace_all(movie_table$Opening,"[$,]","")
+movie_table$Total_Theaters<-str_replace_all(movie_table$Total_Theaters,"[,]","")
+movie_table$Open_theatre<-str_replace_all(movie_table$Open_theatre,"[,]","")
+# convert to numeric
+movie_table$Gross_Q3<-as.numeric(movie_table$Gross_Q3)
+movie_table$Total_Theaters<-as.numeric(movie_table$Total_Theaters)
+movie_table$Opening<-as.numeric(movie_table$Opening)
+movie_table$Rank<-as.numeric(movie_table$Rank)
+movie_table$Gross_Q3<-movie_table$Gross_Q3/1000000
+movie_table$Opening<-movie_table$Opening/1000000
+movie_table[1:10,]
+```
+
+##### Step 4. Export the top ranked movies
+
+The top ranked movies are then exported as a table to be used to develop the survey and input into the database
+
+```{r}
+movie_names<-subset(movie_table,Rank<=10,Rank:Title)
+write.table(movie_names,file.path(outputdir,"movie_names.csv"),row.names=FALSE,col.names=FALSE,quote=TRUE,sep=",",eol="\n")
+```
+
+##### Step 5. Develop a Survey Instrument
+Survey can be accessed at the link below
+https://www.surveymonkey.com/r/WJQ6PBG
+
+The survey is conducted for six respondents and export the data. The data is exported and a SQL database is created. Please see MySQL code. 
+
+##### Step 6. Run SQL Query in R and Import the data
+
+Using the SQL database we run the query in R. 
+```{r Run SQL Queries}
+rmysql.settingsfile<-"C:/Program Files/MySQL/MySQL Server 5.0/my.ini"
+con <- dbConnect(RMySQL::MySQL(), dbname = "moviesurvey", username="root", password="password")
+surveydata<-dbGetQuery(con,"SELECT * from survey")
+dbDisconnect(con)
+```
+
+##### Step 7. Merge and Analyze the data
+
+Develop some initial exploratory plots
+
+```{r Analyze the data}
+survey_reshape<-dcast(surveydata[,2:4],movie_id~survey_id,value.var="score")
+survey_reshape$avgrank<-apply(survey_reshape[,2:7],1,mean)
+survey_combined<-merge(movie_table,survey_reshape,by.x="Rank",by.y="movie_id")
+# Develop some plots
+ggplot(survey_combined,aes(avgrank,Gross_Q3,color=Studio, label=Title))+geom_point(size=3)+xlab("Average Survey Rank")+ylab("Q3 $ Millions")+ggtitle("Movie Rankings and Box Office Success")
+```
