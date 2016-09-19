@@ -1,0 +1,110 @@
+---
+title: "Assignment 2 IS 607"
+author: "Talha Muhammad"
+date: "September 18, 2016"
+output: html_document
+---
+
+## Overview 
+Assignment 2 consists of the following problems from Chapter 8 of **Automated Data collection with R**    
+
+```{r Setup, echo=FALSE}
+library(bitops)
+library(stringr)
+library(RCurl)
+```
+
+##### Question 1
+Copy the introductory example. The vector "names" stores the extracted names.
+a) Use the tools of this chapter to rearrange the vector so that all elements conform to the standard "first_name" "last_name"
+
+```{r Question1a}
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5543642Dr. Julius Hibbert"
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+
+# select first names 
+a<-str_extract_all(name,"\\b[[:alpha:]]+\\ ")
+b<-unlist(str_extract_all(name,"\\, \\b[[:alpha:]]+" ))
+a<-str_extract_all(name, "\\w{2,3}\\.")
+b<-unlist(str_extract_all(name, "[[:alpha:]]+\\,"))
+a<-str_split(name," ")
+```
+
+b) Construct a logical vector indicating whether a character has a title 
+
+```{r Question1b}
+title_vector<-grepl("\\w{2,3}\\.",name)
+title_vector
+```
+
+c) Construct a logical vector indicating whether a character has second name 
+
+```{r Question1c}
+sname_vector<-str_detect(name,"[A-Z]{1}\\.")
+sname_vector
+```
+
+##### Question 2
+Describe the types of strings that conform to the following regular expressions and construct an example that is matched by the regular expression.    
+
+######Part 2A
+
+```{r Question 2a}
+##a) "[0-9]+\\$"      
+q2a<-c("1000$","400000$","$100000")
+unlist(str_extract_all(q2a,"[0-9]+\\$"))
+```
+
+The above string match pattern asks to extract digits from 0 to 9. The digits need to be matched one or more times (+ symbol). Finally the double backslash followed by the "\$" sign indicates that the "\$" needs to be at the end of the expression.        
+
+######Part 2b   
+
+```{r Question 2b}
+##b) "\\b[a-z]{1,4}\\b"      
+q2b<-c("The News interests me","the news is interesting","$100000","   we are")
+unlist(str_extract_all(q2b,"\\b[a-z]{1,4}\\b"))
+## removing \\b
+unlist(str_extract_all(q2b,"[a-z]{1,4}"))
+```
+
+The above string match pattern asks to extract letters from a-z. The \\b sign requires the match to start from the word-edge and end with a word edge. In the above expression,"The News interests me", "The News" starts with a capital letter so the entire word is not regarded as a match. Without the  \\b sign, for the "The News", we would get "he ews" as a match. The expression \\{1,4} indicates that the match length from word edge to word edge should be one to four letters long.
+
+######Part 2c   
+
+```{r Question 2c}
+##c) ".*?\\.txt$"      
+q2c<-c("filename1.txt$","filename2.txt","$100000","   we are","Ourfiles.txt",".txt","ftxt","filename2.txtlong")
+unlist(str_extract_all(q2c,".*?\\.txt$"))
+## removing $
+unlist(str_extract_all(q2c,".*?\\.txt"))
+## removing *
+unlist(str_extract_all(q2c,".?\\.txt"))
+```
+
+The above string match pattern asks to extract letters such that the expression end in ".txt".  The \$ sign requires that ".txt" character be the ending text expression. The initial "." is a wild-card character which allows any character followed by "*" character which indicates that the wild card character will be matched zero or more times. In other words if there is a character before the ".txt" the entire expression will be matched.    
+Without the \$ sign the matches include expressions where ".txt" is not the ending expression. Without the \? character expressions that do not have any text before ".txt" expression do not match.    
+
+######Part 2d
+
+```{r Question 2d}
+##d) "\\d{2}/\\d{2}/\\d{4}"      
+q2d<-c("04/09/1994","02-04-2014","01 May/2001","   we are","1984")
+unlist(str_extract_all(q2d,"\\d{2}/\\d{2}/\\d{4}"))
+```
+
+The above string match pattern asks to extract digit characters separated by a \/. The \\d{2} asks that two digits should be extracted followed by a forward slash - then another two digits and finally a 4 digits should be extracted.  
+
+######Part 2e
+
+```{r Question 2e}
+##e) "<(.+?)>.+?</\\1>"      
+q2e<-c("<(204)>401</901 patterns are matched/ <abc>  even though they are different</  <(786)>401</901","04/09/1994","(201)443-1094","<(201)>446/  <144>786/","<(199)>104</109","(201)443 (571)-423")
+#without backreferencing
+unlist(str_extract(q2e,"<(.+?)>.+?</"))
+unlist(str_extract_all(q2e,"<(.+?)>.+?</"))
+## with backreferencing
+unlist(str_extract(q2e,"<(.+?)>.+?</ \\1"))
+unlist(str_extract_all(q2e,"<(.+?)>.+?</ \\1"))
+```
+
+The question tests understanding of backreferencing. The idea with backreferencing is to be able to reference a particular expression again and to be able to locate the similar expression in the same text expression. In the above the functions without backreference are able to find the patterns
