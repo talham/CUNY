@@ -1,0 +1,126 @@
+---
+title: "Data 607 Project 1"
+author: "Talha Muhammad"
+date: "September 25, 2016"
+output: html_document
+---
+## Overview
+
+We are given an assignment containing a text file with chess tournament results where the information has some structure. The goal is to create an R Markdown file that generates a .CSV file (that could for example be imported into a SQL database).  
+We need to calculate the Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents. 
+
+
+```{r loadpackages, warning=FALSE}
+library(stringr)
+library(ggplot2)
+```
+
+
+
+```{r filesetup,warning=FALSE}
+#file name and 
+fname="tournamentinfo.txt"
+data=readLines(fname)
+data[1:10]
+```
+
+The above outputs presents the raw textfile that was given to us. 
+
+### Data Cleaning Using Regular Expressions
+Data were cleaned using regular expressions, particularly using the Stringr package in R. Below are listed the different steps used in the analysis. 
+
+The analysis consists of several steps as outlined below      
+*1.Removing Different Separators*     
+*2.Extracting Names of Players*    
+*3.Extracting the State of Origin*     
+*4.Extracting the Total Points*
+*5.Extracting the PreRankings and PostRanks*
+*6.Calculating the average rank of opponents played by each player*
+
+```{r datacleaning}
+# data cleaning, removing separators
+line_vector<-str_detect(data,"\\-----")
+chess_data<-data[!line_vector]
+# removing headers and separators
+chess_data<-chess_data[3:length(chess_data)]
+chess_data<-str_split(chess_data,"\\|")
+
+#extract names of all players
+ext_data<-str_extract_all(chess_data,"[[:alpha:]-?[:alpha:]  ?]{2,}")
+names_loc<-str_detect(unlist(ext_data),"[[:alpha:]]{3,}")
+names<-unlist(ext_data)[names_loc]
+head(names)
+#extract state of origin
+state_loc<-str_detect(unlist(ext_data),"[[:alpha:]]{2}")
+state<-unlist(ext_data)[(state_loc)&(!names_loc)]
+head(state)
+#extract points
+num_data<-str_extract_all(chess_data,"\\d{1,}+\\.?.?")
+pt_loc<-str_detect(unlist(num_data),"\\d\\.\\d")
+pts<-unlist(num_data)[(pt_loc)]
+head(pts)
+#extract pre->post
+rtg_data<-str_extract_all(chess_data,"(( \\:)|(\\>))?.?\\d{1,}P*\\.?")
+pre_loc<-str_detect(unlist(rtg_data),"\\b\\d{3,4}P?\\b")
+post_loc<-str_detect(unlist(rtg_data),"\\>.?\\b\\d{3,4}P?\\b")
+pre_rating<-unlist(rtg_data)[(pre_loc)&(!post_loc)]
+pre_rating<-str_replace_all(pre_rating,"P","")
+post_rating<-unlist(rtg_data)[post_loc]
+post_rating<-str_replace_all(post_rating,"([>P])","")
+head(pre_rating)
+head(post_rating)
+
+#extract games played by player
+gm_data<-str_extract_all(chess_data,"[WDL]...\\d{1,2}")
+gm_data<-str_extract_all(gm_data,"\\.?\\d{1,2}")
+gm_data<-str_replace_all(gm_data,"\\b[0]\\b",".")
+gm_zl<-str_detect(gm_data,fixed("."))
+gm_data<-gm_data[!(gm_zl)]
+head(gm_data)
+```
+
+Extracted data are then combined to develop a dataframe: 
+
+```{r develop_dataframe}
+# remove spaces
+id<-seq(1,64,by=1)
+names<-str_trim(names,"both")
+state<-str_trim(state,"both")
+pre_rating<-str_trim(pre_rating,"both")
+post_rating<-str_trim(post_rating,"both")
+playerranks<-cbind(id,names,state,pts,pre_rating,post_rating)
+playerranks<-as.data.frame(playerranks)
+#numeric data are stored as factors, convert to numeric
+playerranks$pts<-as.numeric(as.character(playerranks$pts))
+playerranks$pre_rating<-as.numeric(as.character(playerranks$pre_rating))
+playerranks$post_rating<-as.numeric(as.character(playerranks$post_rating))
+head(playerranks)
+```
+
+Using a loop we query all the opponents played by each player during seven rounds of play. These are then averaged to get the mean ranking. 
+
+```{r Player Rankings}
+#calculate the mean of opponent rankings
+result<-array(0,dim=nrow(playerranks))
+#loop through all the players
+for (i in 1:nrow(playerranks)){ 
+  #extract opponent data and query rankings
+  match_res<-as.numeric(str_split(unlist(str_extract_all(gm_data[i],"\\d{1,2}"))," "))
+  #calcuate the average of opponent rankings
+result[i]<-mean(playerranks[match_res,colnames(playerranks)=="pre_rating"])
+};
+
+playerranks$avg_rating<-result
+head(playerranks)
+#write the output to a CSV file
+write.csv(playerranks,"playerrank_clean",row.names=FALSE)
+```
+
+Finally some plots to view the analysis... 
+
+ 
+
+```{r Develop Plots}
+# Develop some plots
+ggplot(playerranks,aes(avg_rating,pts,color="players"))+geom_point(size=3)+xlab("Average Opponent Rating")+ylab("Total Points")+ggtitle("Chess Players and Opponents")
+```
