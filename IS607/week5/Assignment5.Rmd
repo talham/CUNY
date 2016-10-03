@@ -1,0 +1,78 @@
+---
+title: "Data 607, Assignment Week5"
+author: "Talha Muhammad"
+date: "October 2, 2016"
+output: html_document
+---
+
+```{r filepath, include=FALSE}
+wkdir=file.path("C://Users//talha//Documents//Training//CUNY Classes//IS607//Week5")
+setwd(wkdir)
+```
+
+## Overview    
+       
+The purpose of this assignment is to use the packages "tidyr" and "dplyr" and the different functions that are part of the packages. The exercises below reshape and use the data to illustrate the different packages. 
+
+
+```{r setup, warning=FALSE,message=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+
+```{r fileread}
+#read in the file
+numbersdata<-read.csv("numbersense.csv",header=TRUE,sep=",")
+# this is the original data set we are working with
+head(numbersdata)
+# selectdata to remove #NA's
+selectdata<-numbersdata %>%  
+  filter(!is.na(Phoenix)) %>% 
+    rename(Airline=X,Arrival=X.1,"Los Angeles"=Los.Angeles,"San Diego"=San.Diego,"San Francisco"=San.Francisco)
+
+#replace missing values
+selectdata$Airline<-as.character(selectdata$Airline)
+selectdata$Airline[selectdata$Airline==""]<-c("Alaska","AM West")
+# renamed dataset
+selectdata
+
+#create tidy dataset and sort the data
+tidydata<-selectdata %>% 
+  gather(key=region,value=Number,3:7)
+tidydata<-arrange(tidydata,Airline,Arrival)
+# the tidy dataset
+head(tidydata)
+
+# total flights delayed and and Ontime
+tidydata %>% 
+  group_by(Airline,Arrival) %>% 
+  summarize(total=sum(Number))
+# total flights by airline
+tidydata %>% 
+  group_by(Airline) %>% 
+  summarize(total=sum(Number))
+
+#reshape the data and calculate proportions
+# use the mutate function to total and proportion of delayed flights
+spreadata<-tidydata %>% 
+  spread(Arrival,Number) %>% 
+  mutate(total=delayed+`on time`,prop=delayed/total)
+```
+      
+      
+```{r plots}
+#create plot
+# plot of delayed airlines
+ggplotly(ggplot(filter(tidydata,Arrival=="delayed"),aes(region,Number,color=Airline))+geom_point(size=3)+ggtitle("Delayed Flights")+ylab("Number of Delayed Flights"))
+ 
+
+#bar plot of delayed flights
+ggplotly(ggplot(spreadata,aes(x=region,y=prop))+geom_bar(aes(fill=Airline),stat="identity",position="dodge")+ylab("Proportion of Delayed Flights")+ggtitle("Delayed Flights by Region"))
+```
+       
+        
+The steps shown serve as an illustration of the way different functions within the "dplyr" and "tidyr" packages work and how they can simplify data analysis. 
+   
+   
