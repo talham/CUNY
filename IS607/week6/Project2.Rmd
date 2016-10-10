@@ -1,0 +1,101 @@
+---
+title: "Data607 Project 2"
+author: "Talha Muhammad"
+date: "October 8, 2016"
+output: html_document
+---
+
+# Dataset 1: Loan Data From Lending Tree
+       
+This analysis looks at the 2012-2013 loans data from Lending Tree. 
+
+```{r filepath, include=FALSE}
+datadir=file.path("C://Users//talha//Documents//Training//Datasets//Financial//Lendingclub//")
+filename=file.path(datadir,"LoanStats3b.csv")
+```
+
+
+```{r setup, warning=FALSE,message=FALSE}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+```
+
+```{r cleandata, warning=FALSE,message=FALSE}
+lendingdata<-read.csv(filename,header=TRUE,stringsAsFactors=FALSE,skip=1)
+lendingdata$url<-NULL
+lendingdata$desc<-NULL
+#clean up zip code data
+lendingdata$zip_code<-str_replace(lendingdata$zip_code,"xx","")
+#clean interest rate data
+lendingdata$int_rate<-as.numeric(str_replace(lendingdata$int_rate,"%",""))
+summary(lendingdata$int_rate)
+lendingdata$revol_util<-as.numeric(str_replace(lendingdata$revol_util,"%",""))
+summary(lendingdata$revol_util)
+
+# clean loan term
+lendingdata$term<-as.numeric(str_replace(lendingdata$term,"months",""))
+summary(lendingdata$term)
+# clean emp_length
+lendingdata$emp_length<-str_trim(str_replace(lendingdata$emp_length,"years",""),"both")
+lendingdata$emp_length<-str_replace(lendingdata$emp_length,"\\+","")
+lendingdata$emp_length<-as.numeric(lendingdata$emp_length)
+lendingdata<-mutate(lendingdata,emp_lencat=ifelse(emp_length<1,"<1",ifelse(((emp_length>=1)&(emp_length<3)),"1-3",ifelse(((emp_length>=3)&(emp_length<5)),"3-5",ifelse(((emp_length>=5)&(emp_length<=9)),"5-9",ifelse(emp_length>9,"10+",NA))))))
+#process dates
+lendingdata<-rename(lendingdata,cr_line=earliest_cr_line)
+lendingdata$cr_line<-str_c("01-",lendingdata$cr_line)
+lendingdata$cr_line<-as.Date(lendingdata$cr_line,format="%d-%b-%Y")
+
+lendingdata$last_pymnt_d<-str_c("01-",lendingdata$last_pymnt_d)
+lendingdata$last_pymnt_d<-as.Date(lendingdata$last_pymnt_d,format="%d-%b-%Y")
+ 
+lendingdata$issue_d<-str_c("01-",lendingdata$issue_d)
+lendingdata$issue_d<-as.Date(lendingdata$issue_d,format="%d-%b-%Y")
+
+#credit history
+lendingdata<-mutate(lendingdata,cr_hist=difftime(issue_d,cr_line,units=c("weeks")))
+lendingdata$cr_hist<-lendingdata$cr_hist/52  #convert to years
+lendingdata$last_pymnt_d<-format(lendingdata$last_pymnt_d,"%b-%Y")
+lendingdata$issue_d<-format(lendingdata$issue_d,"%b-%Y") 
+lendingdata$cr_line<-format(lendingdata$cr_line,"%b-%Y")
+#convert to factors
+lendingdata$application_type<-as.factor(lendingdata$application_type)
+lendingdata$home_ownership<-as.factor(lendingdata$home_ownership)
+lendingdata$verification_status<-as.factor(lendingdata$verification_status)
+lendingdata$loan_status<-as.factor(lendingdata$loan_status)
+#select variables of interest
+lendingdata<-select(lendingdata,one_of(c("id","member_id","addr_state","loan_amnt","int_rate","term","installment","emp_length","home_ownership","annual_inc","cr_hist","issue_d","cr_line","last_pymnt_d","verification_status","loan_status","emp_length","emp_lencat")))
+head(lendingdata)
+
+```
+       
+       
+Various summaries and charts of the clean data are presented below:        
+```{r summary_analysis}
+#summary of loans by state
+su_total<-lendingdata %>% 
+  group_by(addr_state) %>% 
+  summarize(total_loans=sum(loan_amnt/1000000))
+su_total<-su_total[!(su_total$addr_state==""),]
+ggplot(su_total,aes(x=addr_state,y=total_loans))+geom_bar(stat="identity")+ylab("Total Loans (in Millions)")+theme(axis.text.x=element_text(size=8,angle=90))+ xlab("US State")+ggtitle("Total Loans by State (in Millions)")
+
+a<-subset(lendingdata,((addr_state=="NY")|(addr_state=="NJ")|(addr_state=="CT")),select=c(addr_state,home_ownership,int_rate))
+y <- ggplot(a, aes(y=int_rate, x=home_ownership)) + geom_boxplot(aes(color=home_ownership))
+y+facet_grid(~addr_state)+ylab("Interest Rate %")+xlab("Home Ownership")+theme(legend.position="top",axis.text.x=element_text(size=5))+ggtitle("Interest Rates by Home Ownership in Tristate Area")
+
+su_intrate<-lendingdata %>% 
+  group_by(addr_state) %>% 
+  summarize(avg_irate=mean(int_rate))
+su_intrate<-su_intrate[!(su_intrate$addr_state==""),]
+ggplot(su_intrate,aes(x=addr_state,y=avg_irate))+geom_point()+ylab("Interest Rate %")+xlab("US State")+ggtitle("Average Interest Rate by State")+theme(axis.text.x=element_text(size=8,angle=90))
+
+b<-subset(lendingdata,((addr_state=="NY")|(addr_state=="NJ")),select=c(addr_state,emp_lencat,int_rate))
+ggplot(b, aes(y=int_rate, x=emp_lencat)) + geom_boxplot(aes(color=emp_lencat))+ylab("Interest Rate %")+xlab("Employment Length")
+
+lendingdata$annual_inc<-lendingdata$annual_inc/1000
+z<-ggplot(lendingdata,aes(x=annual_inc,y=int_rate))+geom_point(aes(color=emp_lencat))+ylab("Interest Rate %")+xlab("Annual Income in Ths dollars")+ggtitle("Loan Interest Rates by Employment Category and Income")
+z+facet_grid(~emp_lencat)
+
+p<-ggplot(lendingdata,aes(x=cr_hist,y=int_rate))+geom_point(aes(color=emp_lencat))+ylab("Interest Rate %")+xlab("Credit History in Years")+ggtitle("Loan Interest Rates by Credit History and Employment")+scale_x_continuous(breaks=seq(0,75,15))
+p+facet_grid(~emp_lencat)
