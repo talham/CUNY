@@ -1,0 +1,31 @@
+﻿<?xml version="1.0"?>
+<books_data>
+<booksnum ID="1">
+<author>Greg Mortenson</author>
+<title>Three Cups of Tea</title>
+<type>Nonfiction</type>
+<publisher>Penguin</publisher>
+<language>English</language>
+</booksnum>
+<booksnum ID="2">
+<author>David Oliver Relin</author>
+<title>Three Cups of Tea</title>
+<type>Nonfiction</type>
+<publisher>Penguin</publisher>
+<language>English</language>
+</booksnum>
+<booksnum ID="3">
+<author>Jonathan Frenzen</author>
+<title>The Corrections</title>
+<type>Fiction</type>
+<publisher>Picador</publisher>
+<language>English</language>
+</booksnum>
+<booksnum ID="4">
+<author>Michael Chabon</author>
+<title>The Yiddish Policemans Union</title>
+<type>Fiction</type>
+<publisher>Harper Perenial</publisher>
+<language>English</language>
+</booksnum>
+</books_data>
