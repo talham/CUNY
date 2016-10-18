@@ -1,0 +1,108 @@
+---
+title: "Data 607: Week 7 Assignment 3"
+author: "Talha Muhammad"
+date: "October 16, 2016"
+output: html_document
+---
+       
+## Overview 
+Assignment 3 consists of developing some toy data on book publishers in JSON, XML and HTML. These data sets are then coverted to R data frames to show a simple case of how these sources of data might be handled. Below we proceed in the following order      
+1.JSON     
+2.XML     
+3.HTML    
+
+We first created the above datasets in the JSON, XML and HTML formats, "by hand". The respective formats were then imported into R using appopriate packages. 
+     
+```{r filepath, include=TRUE}
+#file path for all three datasets
+datadir=file.path("C://Users//talha//Documents//Training//CUNY Classes//IS607//Week7//")
+```
+
+### JSON data
+```{r setup, warning=FALSE,message=FALSE}
+#load packages in JSONLite
+library(jsonlite)
+filename=file.path(datadir,"bookdata.js")
+```
+
+```{r Analysis}
+#read file names
+bdata<-readLines(filename)
+bdata
+bdata_str<-paste(bdata,"")
+#get JSON data
+jsondata<-fromJSON(bdata_str)
+#class and attributes of jsondata
+class(jsondata)
+length(jsondata)
+names(jsondata)
+lapply(jsondata,class)
+lapply(jsondata,length)
+lapply(jsondata,dim)
+#view different data elements
+head(jsondata[[1]],n=4)
+head(jsondata[[2]],n=4)
+#create data frame from JSON data
+jsondf<-as.data.frame(jsondata)
+#the data frame
+jsondf
+dim(jsondf)
+```
+      
+### XML data   
+
+```{r XML}
+#load a the XML library
+library(XML)
+```
+
+```{r}
+#load the file
+filename=file.path(datadir,"bookdata.xml")
+#parse the XML file
+xml_str<-xmlTreeParse(filename)
+class(xml_str)
+#extract the root node
+root<-xmlRoot(xml_str)
+# extract children node
+child<-xmlChildren(root)
+# extract subchildren node
+schild<-xmlChildren(child[[1]])
+
+# extract nodes using XPATH notation
+getNodeSet(root,"//booksnum[@ID]")
+getNodeSet(root,"//author")
+getNodeSet(root,"//title")
+getNodeSet(root,"//type")
+getNodeSet(root,"//publisher")
+getNodeSet(root,"//language")
+
+sapply(schild,xmlName)
+sapply(child,xmlValue)
+sapply(child,xmlAttrs)
+sapply(schild,xmlValue)
+# develop data frame from XML data
+author_df0<-as.data.frame(sapply(getNodeSet(root,"//booksnum[@ID]"),xmlAttrs))
+author_df1<-as.data.frame(sapply(getNodeSet(root,"//author"),xmlValue))
+author_df2<-as.data.frame(sapply(getNodeSet(root,"//title"),xmlValue))
+author_df3<-as.data.frame(sapply(getNodeSet(root,"//type"),xmlValue))
+author_df4<-as.data.frame(sapply(getNodeSet(root,"//publisher"),xmlValue))
+author_df5<-as.data.frame(sapply(getNodeSet(root,"//language"),xmlValue))
+author_df<-cbind(author_df0,author_df1,author_df2,author_df3,author_df4,author_df5)
+#column names
+colnames(author_df)<-c("ID",sapply(schild,xmlName))
+#dataframe from XML data
+author_df
+```
+     
+### HTML data    
+      
+```{r HTML}
+filename=file.path(datadir,"bookdata.html")
+# parse the HTML file
+html_str<-htmlParse(filename)
+# read tables
+tables<-readHTMLTable(html_str,stringsAsFactors=FALSE)
+# develop data frames
+html_df<-as.data.frame(tables[[1]])
+html_df
