@@ -1,0 +1,76 @@
+---
+title: "NYTimes Web API"
+author: "Talha Muhammad"
+date: "October 27, 2016"
+output: html_document
+---
+
+## New York Times Article Search API 
+#### Task: Make an API call and covert to a dataframe
+
+```{r, warning=FALSE, message=FALSE}
+library(XML)
+library(stringr)
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r API Calls}
+baseurl<-"https://api.nytimes.com/svc/search/v2/articlesearch.json"
+pagelist<-seq(0,9,1)
+api<-fromJSON(paste0(baseurl,"?q=","election","&page=",pagelist[1],"&begin_date=20160101&end_date=20160930&api-key=",getOption("nytimesid")))
+apidf<-as.data.frame(api$response)
+```
+
+```{r Classes}
+## lots of different classes of characters
+lapply(apidf,class)
+```
+     
+There are quite a few different classes of items in this data frame. We need to do some further processing of this data. We proceed as below by identifying the simple data structures compared to the more complicated ones. 
+     
+     
+```{r Data Cleaning}
+headline<-select(apidf,contains("docs.headline"))
+names(headline)
+apidf$docs.headline<-NULL
+
+#data frame of headlines
+headline<-as.data.frame(cbind(headline$docs.headline$main,headline$docs.headline$print_headline,headline$docs.headline$content_kicker,headline$docs.headline$kicker))
+#rename headlines
+headline<-rename(headline,main=V1,print=V2,content_kicker=V3,kicker=V4)
+
+#bylines 
+byline<-select(apidf,contains("docs.byline"))
+apidf$docs.byline<-NULL
+names(byline)
+#do various transformations on byline
+byline<-as.data.frame(cbind(byline$docs.byline$contributor,byline$docs.byline$person,byline$docs.byline$original,byline$docs.byline$organization))
+l<-names(api$response$docs$byline)
+colnames(byline)<-l
+byline$person<-NULL
+byline<-as.data.frame(byline)
+
+# transform and reshape keywords
+keywords<-select(apidf,contains("docs.keywords"))
+keywords$num<-row.names(keywords)
+apidf$docs.keywords<-NULL
+#needs some more work
+#d<-as.data.frame(keywords$docs.keywords[3])
+#d$num<-keywords$num[3]
+
+
+#transform blogs
+apidf$docs.blog<-NULL
+apidf$docs.multimedia<-NULL
+
+#combine the different dataset 
+diff<-bind_cols(headline,byline)
+finaldf<-bind_cols(apidf,diff)
+#is data.frame
+is.data.frame(finaldf)
+lapply(finaldf,class)
+head(finaldf)
+```
