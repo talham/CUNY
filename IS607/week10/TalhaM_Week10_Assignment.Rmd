@@ -1,0 +1,69 @@
+---
+title: "Week 10 Assignment: Document Classification"
+author: "Talha Muhammad"
+date: "November 6, 2016"
+output: html_document
+---
+
+## Overview Spam Email Filtering
+
+
+```{r packages, warning=FALSE, warning=FALSE}
+library(RCurl)
+library(XML)
+library(stringr)
+library(tm)
+library(RTextTools)
+```
+
+```{r Loadfiles}
+ehamfiles_train<-list.files("easy_ham_20021010")
+hhamfiles_train<-list.files("hard_ham_20021010")
+spamfiles_train<-list.files("spam_20021010")
+
+ehamfiles_test<-list.files("easy_ham_20030228")
+hhamfiles_test<-list.files("hard_ham_20030228")
+spamfiles_test<-list.files("spam_20030228")
+
+eham_corpus=readLines(file.path("easy_ham_20021010",ehamfiles_train[1]))
+e2=readLines(file.path("easy_ham_20021010",ehamfiles_train[2]))
+#write function
+for(i in 2:length(hamfiles_train))
+  eham_corpus<-str
+e<-str_replace_all(eham_corpus,"[[___]]+","")
+a<-str_trim(a,side=c("both"))
+a<-str_to_lower(a)
+a<-unlist(a)
+# str_extract_all(a,"[date\\:]?+[:alpha:]{3}[[:punct:]]?[0-3]{2}\\s+[:alpha:]{3//}[0-9]{4}\\s+\\d{2}\\:\\d{2}\\:\\d{2}")
+# //str_extract_all(a,"([:alpha:]{3}\\s)?\\d{4}\\s(\\d{2}\\:\\d{2}\\:\\d{2})(\\s[//-|+]\\d{4})?")
+# str_extract_all(a,"(\\d{2}\\s[:alpha:]{3}\\s)\\d{4}")
+# str_extract_all(a,"\\s(\\d{2}\\:\\d{2}\\:\\d{2})(\\s[-|+]\\d{4})?")
+# str_extract_all(a,"\\[\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\]")
+# b<-str_replace_all(a,"([:alpha:]{3}\\s)?\\d{4}\\s(\\d{2}\\:\\d{2}\\:\\d{2})(\\s[-|+]\\d{4})?","")
+
+#remove dates 
+a<-str_replace_all(a,"\\d{2}\\s[:alpha:]{3}\\s\\d{4}","")
+#remove times
+a<-str_replace_all(a,"\\s?(\\d{2}\\:\\d{2}\\:\\d{2})(\\s[-|+]\\d{4})?","")
+#remove IP addresses
+a<-str_replace_all(a,"\\[\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\]","")
+#collapse readlines
+a<-str_c(a,collapse=" ")
+
+b<-VectorSource(a)
+b<-Corpus(b)
+
+e2<-unlist(e2)
+e2<-str_c(e2,collapse=" ")
+e2<-VectorSource(e2)
+e2<-Corpus(e2)
+d<-c(b,e2)
+meta(d[[1]],"ID")<-1
+meta(d[[1]],"ham")<-1
+meta(d[[2]],"ID")<-2
+meta(d[[2]],"ham")<-1
+#tdm2<-removeSparseTerms(tdm,1-(2/length(d)))
+
+metadata<-meta(a,ham=1,id=1)
+tdm<-TermDocumentMatrix(d)
+```
