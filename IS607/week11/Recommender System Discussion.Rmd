@@ -1,0 +1,83 @@
+---
+title: "TalhaM_Week11_Response"
+author: "Talha Muhammad"
+date: "November 10, 2016"
+output: html_document
+---
+
+## Recommendation System Scenario Analysis
+As part of this assignment we have been asked to conduct scenario analysis for a recommendation system website. 
+The goal is to conduct scenario analysis from the perspective of both the developers and the users. 
+
+A scenario analysis consists of asking the following questions:       
+1. Who are your target Users?      
+2. What are their key goals?      
+3. How can you help them accomplish these goals?     
+
+#### Identify a Recommender System website
+I will look at the *Linkedin* job recommendation engine.
+
+**Linkedin Job Recommendation Engine**      
+The Linkedin Job recommendation engine recommends jobs that you might be interested in applying to, or one might be a good fit for. It has both "sponsored" jobs and recommended jobs. Sponsored jobs presumably those jobs that premium customers / employers are advertising for greater visibility. Recommended jobs include the remaining universe of employment opportunities advertised on the site. 
+
+**Who is the Linkedin Customer?**      
+In my opinion revenue sources and customers for Linkedin are quite different.There are different revenue channels at Linkedin. We examine only the job search component at Linkedin.  Linkedin's most valuable customer and its asset are the professionals that are on the site. These professionals - a proportion of whom sign up for premium services provide subscription based revenues - although many use the site for free. Additionally, Linkedin derives revenue from firms advertising open positions. 
+Thus there are two main customers from the perspective of the job search / recruiting application:
+1. The professionals on the site
+2. The firms looking fill vacant positions. 
+
+For the analysis here we will focus on the professionals on the site who are looking for employment opportunities or new employment opportunities. 
+
+#### Scenario Analysis from Customers Perspective
+
+**Who are the Target Users?**     
+Target users are those who are actively and / or passively searching for new opportunites.        
+**What are their key goals?**       
+Customers are looking for new opportunities. These consist of:       
+1.Professionals looking to make parallel moves into another industry 
+2.Those looking for more responsibility within the same industry
+3.Professionals looking to change or switch careers.       
+
+**How can you help them accomplish these goals?**        
+It is important to help customers / job seekers provide them with highly relevant matches. Relevant matches would have a few characteristics. The matches would firstly address their goals. The customers would / should have a reasonably high likelihood of hearing back from positions - or should know they have a low likelihood of hearing back. 
+
+#### Scenario Analysis from Organizations Perspective
+
+**Who are the Target Users?**      
+Target users are those who are currently or likely to become premium customers searching for new opportunites. Non-premium customers also add value for the second category of target users. The second category of target users are those who are looking to fill vacant positions.        
+
+**What are their key goals?**     
+Premium and non premium subscribers are looking for new opportunities. These consist of: 
+1.Professionals looking to make parallel moves into another industry 
+2.Those looking for more responsibility within the same industry
+3.Professionals looking to change or switch careers. 
+
+Paying firms are looking for new candidates:
+1. These consist of people who can hit the ground running and are doing the same or similar work in the same industry. "Poaching" from others in the industry.
+2. Candidates in different industries doing relevant work. These bring a fresh perspective.
+3. Candidates with diverse work experiences who are currently / or demonstrate through extra-curricular activies and work experiences that will be successful at the firm. 
+
+**How can you help them accomplish these goals?**      
+It is important to help hiring firms provide them with highly relevant matches. Relevant matches would have a few characteristics. The matches would firstly address their goals. The customers should be interested in the candidates. 
+
+### Reverse Engineering the Recommendation Engine     
+Experimenting with recommendation engine has led a number of insights
+1. Current job position titles are highly weighted in the analysis.       
+
+2. Your behavior (through clicks) impacts the results significantly. If you click a position that initially seemed interesting but was a poor match, subsequent matches show are impacted significantly.     
+
+3. Good aspirational employment opportunities are harder to see. Aspirational jobs are being addressed through consumer behavior (clicks). However, these are typically significantly influenced by job title rather than job content.       
+
+### Recommendations to Improve the Site    
+
+1. If a user has a non typical title then recommendations will be generally poor. For example a *Manager* title is mostly shown *Manager* positions. For those with non-typical titles - perhaps in small or highly specialized industries - looking for other opportunties recommendations are poor. Recommendations should be based on job descriptions and profile summaries rather than job titles.      
+
+2. Recommended jobs should be influenced by user's behavior but with some significant allowance for non-optimal clicking. Say for example 60% based on previous clicking and 40% based on non-clicked jobs.        
+
+3. Signaling information like expected pay and profiles and number of people applying to different positions are being already provided to premium / subscription based customers. However, it is not clear how much these influence the recommendation engine.      
+
+
+### Conclusions        
+We conducted scenario analysis for Linkedin Job recommendation engine. Scenario analysis from the perspective of the user / customer is slightly different from that of the organization (Linkedin in this case). We reverse engineered / guessed some of the salient aspects of the algorithm. We also suggest certain improvements. 
+
+
