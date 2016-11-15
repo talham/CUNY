@@ -1,0 +1,44 @@
+---
+title: "Final Project Proposal"
+Project Team: "Talha Muhammad & Sharon Morris"
+date: "November 13, 2016"
+output: html_document
+---
+
+## Final Project Proposal
+
+### Overview 
+We would like to understand through different sources the changes in real estate prices in New York City. We would seek to understand how have the rental and property prices changed through out the city. 
+
+### Data sources
+Interesting data sources: 
+#### Real Estate Data (API)
+ 1. Zillow API's provide data on comparable properties and market rates
+ 2. Zillow provides neighborhood boundaries
+ 3. Census data PUMS (available via API and CSV)
+ 
+#### CSV data sources
+ 4. Incident level data on Crime (Chicago all types, NYC only major types of felony available for 2015)
+ 5. Citibike data 
+
+City of Chicago Crime data 
+https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2
+
+
+### Approach
+Idea 1: Take census tract level information from Census PUMS data. The data has a variety of interesting variables including rent or condo paid (will have to do multiple years to see how things have changed). Match it with crime data. This can be done for Chicago or New York city.Analysis can be done over multiple years. 
+ 
+Idea 2: Do a more in depth analysis of the Citibike dataset. We could supplement it with an analysis on twitter data on bike related events, bike related twitter handles and on citibike twitter handle. Open to other sources of data here
+
+Idea 3 (unrelated): conduct sentiment analysis on movie reviews using this dataset
+http://ai.stanford.edu/~amaas/data/sentiment/
+supplement with data from IMDB or other sites
+
+Outputs Requirements
+- Two Different data sources (eg. csv and api)
+- Includes one data transformation
+- One statistical analysis & graphical analysis validates your data
+- One graphic & one statistical analysis that supports your conclusions 
+- One feature we did not cover in class
+
+
