@@ -8,7 +8,7 @@ output: html_document
 ## Final Project Proposal
 
 ### Overview 
-We would like to understand through different sources the changes in real estate prices in New York City. We would seek to understand how have the rental and property prices changed through out the city. 
+We would like to understand through different sources the changes in real estate prices in New York City. We would seek to understand how have the rental and property prices changed through out the city and the causes behind it.  
 
 ### Data sources
 Interesting data sources: 
@@ -28,7 +28,7 @@ https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2
 ### Approach
 Idea 1: Take census tract level information from Census PUMS data. The data has a variety of interesting variables including rent or condo paid (will have to do multiple years to see how things have changed). Match it with crime data. This can be done for Chicago or New York city.Analysis can be done over multiple years. 
  
-Idea 2: Do a more in depth analysis of the Citibike dataset. We could supplement it with an analysis on twitter data on bike related events, bike related twitter handles and on citibike twitter handle. Open to other sources of data here
+Idea 2: Do a more in depth analysis of the Citibike dataset. We could supplement it with an analysis on twitter data on bike related events, bike related twitter handles and on citibike twitter handle. Open to other sources of data here (this will probably be easier to do: most likely less data cleaning)
 
 Idea 3 (unrelated): conduct sentiment analysis on movie reviews using this dataset
 http://ai.stanford.edu/~amaas/data/sentiment/
