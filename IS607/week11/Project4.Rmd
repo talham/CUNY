@@ -1,0 +1,64 @@
+---
+title: "Project 4"
+author: "Talha Muhammad"
+date: "November 16, 2016"
+output: html_document
+---
+
+### Overview
+Migrate an SQL database to a No-SQL database. I will use the *flights* database as the SQL database and migrate to the NOSQL database *MongoDB*.
+
+```{r setup, include=TRUE, warning=FALSE, message=FALSE}
+#load Mongo DB, JSON and other packages
+library(mongolite)
+library(tidyr)
+library(dplyr)
+library(jsonlite)
+library(RMySQL)
+```
+
+###Query a MongoDB Collection
+For illustration I query the restaurants dataset using MongoDB. Data has been previously loaded into MongoDB:
+
+```{r database}
+# Query the Mongo database
+m<-mongo(collection="restaurants", db="test")
+# summary counts by borough
+m$aggregate('[{"$group": { "_id": "$borough", "count": {"$sum": 1 } } }]')
+# select the data
+restman<-m$find('{ "borough": "Manhattan" }')
+restman<-flatten(restman, recursive=TRUE)
+# data header
+head(restman)
+#summary by cuisine in Manhattan
+rest_cu<-restman %>% group_by(cuisine) %>% count(borough,sort=TRUE)
+# summary of restuarants in the City
+head(rest_cu)
+```
+
+### Query the SQL database
+I query the flights database from the local SQL server. I query the planes table in the flights database.    
+
+```{r flightsdata}
+rmysql.settingsfile<-"C:/Program Files/MySQL/MySQL Server 5.0/my.ini"
+con <- dbConnect(RMySQL::MySQL(), dbname = "flights", username="root", password="password")
+flights.planes<-dbGetQuery(con,"SELECT * from planes")
+dbDisconnect(con)
+# data header
+head(flights.planes)
+```
+
+###Import to MongoDB
+
+I add the data SQL database **flights.planes** as a dataset in MongoDB. 
+
+```{r export}
+fp_js<-mongo(collection="flights", db="planes",url="mongodb://localhost")
+# insert the database into a MongoDB
+fp_js$insert(flights.planes)            
+# select the data for manufacturer
+planes_embraer<-fp_js$find('{"manufacturer":"EMBRAER"}')
+#head of the data
+head(planes_embraer)
+```
+
