@@ -5,7 +5,7 @@ date: "Monday, June 18 2016"
 output: pdf_document
 
 ---
-
+**wanted to test if I can make changes to the files here
 ** Problem 1 **
 * Write a loop that calculates 12 factorial*
 ```{r}
