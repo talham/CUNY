@@ -1,0 +1,184 @@
+import Tkinter
+import tkFileDialog
+import csv
+import re
+import os
+
+# define a dictionaries of values
+buying = {'low': 0, 'med': 1, 'high': 2, 'vhigh': 3}
+maint = {'low': 0, 'med': 1, 'high': 2, 'vhigh': 3}
+doors = {'2': 0, '3': 1, '4': 2, '5more': 3}
+persons = {'2': 0, '4': 1, 'more': 2}
+lug_boot = {'small': 0, 'med': 1, 'big': 2}
+safety = {'low': 0, 'med': 1, 'high': 2}
+car = {'unacc': 0, 'acc': 1, 'good': 2, 'vgood': 3}
+
+maindict = {}
+maindict['buying'] = buying
+maindict['maint'] = maint
+maindict['doors'] = doors
+maindict['persons'] = persons
+maindict['lug_boot'] = lug_boot
+maindict['safety'] = safety
+maindict['car'] = car
+
+
+# Define the car learning class
+class CarLearning:
+    carCount = 0
+    goodcount = 0
+    badcount = 0
+
+    def __init__(self, buying, maint, doors, persons, lug_boot, safety, condition):
+        CarLearning.carCount += 1
+        self.buying = buying
+        self.maint = maint
+        self.doors = doors
+        self.persons = persons
+        self.lug_boot = lug_boot
+        self.safety = safety
+        self.condition = condition
+
+    def __repr__(self):
+        return repr((self.buying, self.maint, self.doors, self.persons, self.lug_boot, self.safety, self.condition))
+
+
+# the function opens and reads a file, number of rows is hard coded to the data
+def fileopener():
+    root = Tkinter.Tk()
+    root.withdraw()
+    filename = tkFileDialog.askopenfilename()
+    mylist = []
+    with open(filename, 'rb') as fname:
+        try:
+            data = csv.reader(fname, delimiter=",")
+            for row in data:
+                mylist.append(CarLearning(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
+        except IOError as e:
+            print e
+            print 'Error in reading file', '\n'
+    return mylist
+
+
+# validate the data
+def validator(namelist, records):
+    goodlist = []
+    badlist = []
+
+    for i in range(records):
+        val1 = getattr(namelist[i], 'buying')
+        val2 = getattr(namelist[i], 'maint')
+        val3 = getattr(namelist[i], 'doors')
+        val4 = getattr(namelist[i], 'persons')
+        val5 = getattr(namelist[i], 'lug_boot')
+        val6 = getattr(namelist[i], 'safety')
+        if (val1 == 'vhigh' or val1 == 'high' or val1 == 'med' or val1 == 'low') and \
+                (val2 == 'vhigh' or val2 == 'high' or val2 == 'med' or val2 == 'low') and (
+                        val3 == '2' or val3 == '3' or val3 == '4' or val3 == '5more') and \
+                (val4 == '2' or val4 == '4' or val4 == 'more') and (
+                    val5 == 'small' or val5 == 'med' or val5 == 'big') and (
+                    val6 == 'low' or val6 == 'med' or val6 == 'high'):
+            goodlist.append(namelist[i])
+            CarLearning.goodcount += 1
+        else:
+            badlist.append(namelist[i])
+            CarLearning.badcount += 1
+    return goodlist
+
+
+# sort list and class elements
+def sortby(listvar, input, stype):
+    a = []
+    try:
+        if input in maindict.keys():
+            if (stype == "asc"):
+                a = sorted(listvar, key=lambda x: maindict[input][getattr(x, input)])
+            elif (stype == "des"):
+                a = sorted(listvar, key=lambda x: maindict[input][getattr(x, input)], reverse=True)
+            else:
+                print stype, "takes only asc or des"
+    except:
+        pass
+    return a
+
+
+def printlist(listvar, type, rows):
+    l = len(listvar)
+    if type == 'top':
+        return listvar[0:rows]
+    elif type == 'last':
+        return listvar[(l - rows):l]
+
+
+def selectbyregex(listvar, selectpar):
+    a = []
+    i = 0
+    for l in listvar:
+        if (re.search(selectpar, l.maint) and re.search(selectpar, l.buying) and re.search(selectpar, l.safety)):
+            a.append(l)
+    return a
+
+def matches(listvar,matchlist):
+    b=[]
+    for L in listvar:
+        s = 0
+        for i in range(len(matchlist)):
+            if getattr(L,matchlist.keys()[i]) in matchlist.values()[i]:
+                s+=1
+        if s==len(matchlist):
+            b.append(L)
+    return b
+
+def writefile(listvar):
+    root = Tkinter.Tk()
+    root.withdraw()
+    root.update()
+    fname = tkFileDialog.asksaveasfile(mode='w', defaultextension='.csv')
+    try:
+        dataout = csv.writer(fname,delimiter=",")
+        for row in listvar:
+            dataout.writerow([row.buying,row.maint,row.doors,row.persons,row.lug_boot,row.safety,row.condition])
+    except IOError as e:
+        print e
+        print 'Error in writing file', '\n'
+    fname.close()
+
+if __name__ == "__main__":
+    datalist = fileopener()
+    # eval1 = CarLearning('vlow','vvvlow', '2','2','small','high','acc')
+    print "total count"
+    print CarLearning.carCount
+    testlist = validator(datalist, CarLearning.carCount)
+    print CarLearning.goodcount
+    print CarLearning.badcount
+    print getattr(testlist[0], 'buying')
+
+    # Print to the console the top 10 rows of the data sorted by 'safety' in
+    # descending order
+    print "car data, top 10 rows sorted by safety"
+    listone = sortby(testlist, 'safety', 'des')
+    print printlist(listone, 'top', 10)
+
+    # Print to the console the bottom 15 rows of the data sorted by 'maint' in
+    # ascending order
+    print "car data, bottom 15 rows sorted by maint"
+    listtwo = sortby(testlist, 'maint', 'asc')
+    print printlist(listtwo, 'last', 15)
+
+    # Print to the console all rows that are high or vhigh in fields 'buying',
+    # 'maint', and 'safety', sorted by 'doors' in ascending order.  Find these
+    # matches using regular expressions.
+
+    print 'car data, high or vhigh in buying, maint and safety, sorted by doors'
+    listthree = selectbyregex(testlist, 'vhigh|high')
+    listthree_a = sortby(listthree, 'doors', 'asc')
+    print printlist(listthree_a, 'top', len(listthree_a))
+
+    # Save to a file all rows (in any order) that are: 'buying': vhigh, 'maint':
+    # med, 'doors': 4, and 'persons': 4 or more.  The file path can be a
+    # hard-coded location (name it output.txt) or use a dialog box.
+    print 'save to file all rows, buying, maint, doors, persons'
+    matchlist = {'buying': ['vhigh'], 'maint': ['med'], 'doors': ['4'], 'persons': ['4', 'more']}
+    listfour = matches(testlist,matchlist)
+    #print printlist(listfour,'top',10)
+    writefile(listfour)
