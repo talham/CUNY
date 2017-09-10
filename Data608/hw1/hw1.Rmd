@@ -1,0 +1,78 @@
+---
+title: 'Data 605, Visualization: Hw 1'
+author: "Talha Muhammad"
+date: "September 9, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(RCurl)
+library(ggplot2)
+library(dplyr)
+incmag_data<-read.csv(text=getURL("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA608/master/lecture1/Data/inc5000_data.csv"),header=TRUE,sep=",")
+```
+
+## Home Work 1 Data 605
+Develop visualizations using this dataset consisting of the 5000 fastest growing companies in the US.    
+
+After loading the data we develop some summaries of the dataset. 
+   
+```{r summary}
+glimpse(incmag_data)
+summary(incmag_data)
+head(incmag_data)
+```
+### Question 1
+
+**Create a graph that shows the distribution of companies in the dataset by State**
+
+```{r fig1}
+# figure 1, show the number of 
+p<-ggplot(count(incmag_data,State), aes(x=reorder(State,n),n))
+p+geom_bar(stat="identity",fill="darkblue")+xlab("State")+ylab("# Firms")+ggtitle("Number of Firms by State")+coord_flip()+theme(axis.text.y = element_text(size=8))
+#Following Tufte's guidance on minimalism
+p<-ggplot(count(incmag_data,State), aes(x=reorder(State,n),n))
+p+geom_bar(stat="identity",fill="darkblue",alpha=0.7)+xlab("State")+ylab("# Firms")+ggtitle("Number of Firms by State")+coord_flip()+theme_bw()+theme(axis.text.y = element_text(size=7))
+```
+
+
+Let's dig in on the State with the 3rd most companies in the data set:    
+
+### Question 2   
+
+**Create a plot of average employment by industry for companies in this state**   
+only use cases with full data. Your graph should show how variable the ranges are,and exclude outliers.
+
+
+```{r fig2}
+#filter data to focus on the 3rd State
+select_data<-filter(incmag_data,State=="NY")
+#filter data to remove any missing values
+select_data$complete<-complete.cases(select_data)
+select_data<-filter(select_data,complete)
+#filter-out the outliers
+select_data<-select_data %>% group_by(Industry) 
+select_data$rank<-percent_rank(select_data$Employees)
+select_data<-filter(select_data,rank<0.975,rank>0.025)
+#check the result
+summary(select_data$rank)
+##plot the data
+p<-ggplot(select_data,aes(Industry,Employees,color=Industry))
+#use the box plot and change some formatting
+p1<-p+geom_boxplot()+guides(colour="none")+ theme(axis.text.x = element_text(angle=90,vjust=0.5))+scale_y_continuous(breaks=seq(0,1600,200))
+#add means to the chart
+p1+stat_summary(fun.y="mean",geom="point",shape=23,size=2,fill="white")
+```
+
+### Question 3 
+**Create a chart showing revenue per employee**
+
+```{r fig3}
+#calculate revenue per emp
+select_data<-mutate(select_data,rev_emp=(Revenue/Employees)/1000)
+#group and calculate the mean revenue per employee by Industry
+select_data<-select_data %>% group_by(Industry)
+revenue_data<-summarize(select_data,mrev=mean(rev_emp))
+#filter data to focus on the 3rd State
+ggplot(revenue_data, aes(x=mrev,y=reorder(Industry,mrev))) + geom_point(color="red",size=2)+theme_minimal()+scale_x_continuous(breaks=seq(100,800,100))+xlab("Revenue Per Employee (in $ thousands)")+ggtitle("Mean Revenue per Employee by Industry")+ylab("Industry")
+```
