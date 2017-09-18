@@ -1,0 +1,106 @@
+---
+title: "Data 608: Homework 2"
+author: "Talha Muhammad"
+date: "September 16, 2017"
+output: html_document
+---
+
+## Homework 2
+
+```{r setup, include=FALSE}
+library(bigvis)
+library(ggplot2)
+library(dplyr)
+library(ggthemes)
+library(RCurl)
+```
+
+I download the data first and combine all the data into one file   
+
+```{r download,warning=FALSE}
+temp <- tempfile()
+download.file("http://www1.nyc.gov/assets/planning/download/zip/data-maps/open-data/nyc_pluto_16v2%20.zip",temp)
+BK<- read.csv(unz(temp, "BORO_zip_files_csv/BK.csv"))
+MN<- read.csv(unz(temp, "BORO_zip_files_csv/MN.csv"))
+QN<- read.csv(unz(temp, "BORO_zip_files_csv/QN.csv"))
+SI<- read.csv(unz(temp, "BORO_zip_files_csv/SI.csv"))
+BX<- read.csv(unz(temp, "BORO_zip_files_csv/BX.csv"))
+unlink(temp)
+all_pluto_data<-bind_rows(BK,MN,BX,QN,SI)
+rm(BK,MN,BX,QN,SI)
+#referenced code from stackoverflow link below: 
+#https://stackoverflow.com/questions/3053833/using-r-to-download-zipped-data-file-extract-and-import-data
+```
+
+## Question 1  
+
+**Build a graph to help the City determine when most buildings were built. Is there anything that causes you to question the accuracy of the data (note: only look at buildings since 1850).**
+
+We make two different plots; one showing a simple histogram. 
+The histogram shows that most of the buildings were built during 1900-1950's. 
+The second diagram shows a density plot of how the year of construction varies with the number of floors. It shows that a large number of the buildings were constructed during 1900's - 1980's. 
+
+```{r ques1}
+#glimpse of the data
+glimpse(all_pluto_data)
+pluto_select<-filter(all_pluto_data,YearBuilt>=1850)
+#develop plot using ggplot
+p<-ggplot(pluto_select,aes(YearBuilt))
+p+geom_histogram(binwidth=2,fill="blue")
+#using bigvis
+n_bin1 =200
+n_bin2=100
+bin_data = with(pluto_select, 
+                condense(bin(YearBuilt, find_width(YearBuilt, n_bin1)),
+                         bin(NumFloors, find_width(NumFloors, n_bin2))))
+ggplot(peel(bin_data,0.99), aes(NumFloors,YearBuilt, fill=log(.count) )) + 
+  geom_raster()+scale_fill_gradient2(low="yellow",high="red",mid="orange",midpoint=5)
+
+pluto_select %>% filter(YearBuilt>=2015) %>% count(YearBuilt)
+sel1<-pluto_select %>% filter(NumFloors>=50)
+
+ggplot(sel1,aes(YearBuilt,NumFloors,color=Borough))+geom_point()
+
+```
+
+It seems that there are number of built prior to the 1940's, some of whom have a high number of floors. 
+There are some outliers in the data for example, year built for one building is in 2040, and also there are few high rise buildings in Staten Island, with greater 100 floors which seem suspicious. 
+
+## Question 2  
+
+**Create a graph to show how many buildings of certain type were built each year - It should be clear when 20-story, 30-story buildings were built in large numbers.**
+
+```{r ques2}
+# develop floor categories
+pluto_select$Floor_cat<-cut(pluto_select$NumFloors,breaks=c(0,5,10,20,30,40,50,120),labels=c("<=5","5-10","10-20","20-30","30-40","40-50",">50"))
+# a simple bar chart
+pluto_select$Floor_cat<-as.factor(pluto_select$Floor_cat)
+p<-ggplot(pluto_select,aes(YearBuilt,fill=Floor_cat))
+p+geom_bar()
+# develop raster / tile plot
+bin_vis<-pluto_select %>% group_by(Floor_cat,YearBuilt) %>% count()
+ggplot(bin_vis[(!is.na(bin_vis$Floor_cat)&(bin_vis$YearBuilt<2020)),], aes(YearBuilt,Floor_cat, fill=n )) + geom_raster()+scale_fill_gradient2(low="purple",high="red",mid="white",midpoint=3,trans="log")+ggtitle("New York City Buildings")+ylab("Number of Floors, Category")+labs(fill="Count - Log Scale")
+```
+
+The bar chart is not very informative as most of the buildings built were less than 5 floors; and it is hard to see the color differentiation for other floors. 
+
+However, with the tile raster plot, it is much easier to see the differentiation - particularly with the log-scale. For example most of the buildings during the early nineteenth cenury were less than 5 floors. 
+
+## Question 3  
+
+**Your boss suspects that buildings constructed during the World-war II would have lower assessed values than other buildings due to the relatively high cost of construction materials during that time. construct a chart to test this hypothesis**
+
+```{r ques3}
+pluto_select<-mutate(pluto_select,assess_floor=round(AssessTot/NumFloors,0))
+pluto_select$assess_floor[pluto_select$NumFloors==0]<-NA
+pluto_select$Worldwar<-0
+pluto_select$Worldwar[pluto_select$YearBuilt>=1941&pluto_select$YearBuilt<=1945]<-1
+pluto_select$Worldwar<-as.factor(pluto_select$Worldwar)
+#develop plots to explore the hypothesis
+h<-ggplot(pluto_select[!is.na(pluto_select$assess_floor),],aes(x=Worldwar,y=log(assess_floor),color=Worldwar))
+h+geom_boxplot()
+h<-ggplot(pluto_select[!is.na(pluto_select$assess_floor),],aes(x=log(assess_floor),fill=Worldwar))
+```
+
+While the total number of observations are quite different for both the data subsets the mean and quartiles are quite similar; in fact some of the assessed values are generally lower for non-world war buildings
+
