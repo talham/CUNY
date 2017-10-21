@@ -1,0 +1,76 @@
+---
+title: "Data 608: Final Project Proposal"
+author: "Talha Muhammad"
+date: "October 21, 2017"
+output: html_document
+---
+
+### NHTS 2009 Survey
+
+The National Household Travel Survey (and its predecessor, the Nationwide Personal Travel Survey), is a survey on travel activities conducted every 7 years. The most recent survey data available is from **2009** athough the 2017 survey has been carried out the data is scheduled to be released in early 2018. Recent surveys include 2001, 1995, 1990, and 1983.   
+
+The 2009 NHTS dataset contains data for all 150,147 completed households in the sample. Data have been weighted to correct for over / undersampling to develop representative samples for the entire US.  
+
+#### Data Overview
+
+Publicly available data files for the 2009 NHTS were created by FHWA and contain the following general features:    
+- It is a microdata dataset, which contains the record of each interview (with information deleted that would identify the specific person or household);    
+- The data are arranged in four hierarchical files to facilitate the analysis including household, person, vehicle and daily (travel day) trip level data;  
+- The data are available for download as Statistical Analysis System (SAS) Windows Binary, SAS Transport, Dbase or ASCII;
+
+#### Technology Tools
+
+I propose to analyze the 2009 NHTS for the US. I will use **D3.JS (or Shiny)** to develop the visualizations. 
+
+#### Visualization Goals
+
+I propose to show how travel behaviors across the US vary, including activities related to commuting behaviors by urban and rural areas as well as income level, automobile ownership etc. 
+
+#### Data Links
+
+The FHWA supports the NHTS data, which is housed at: 
+
+http://nhts.ornl.gov   
+
+Data is housed at:   
+
+http://nhts.ornl.gov/download.shtml  
+
+Data dictionaries, code books, survey instruments and other relevant summaries of the data are also summarized at the location.   
+
+#### Policy Relevance
+
+The NHTS is a survey of travel behaviour in the US. In particular since travel behavior is rapidly changing in the US and will continue to change rapidly (particularly in the context of the introduction of autonomous vehicles), the survey data, is very useful to understand that change.    
+
+The transportation research community, including academics, consultants and government, use the NHTS extensively to examine:     
+     
+- Travel behavior at the individual and household level         
+- The characteristics of travel, such as trip chaining, use of the various modes, amount and purpose of travel by time of day and day of week, vehicle occupancy, and a host of other attributes      
+- The relationship between demographics and travel, and            
+- The public's perceptions of the transportation system      
+
+Data collected on daily trips includes:   
+
+- Trip purpose (e.g., work, shopping),     
+- Mode of transportation used (e.g., car, bus, subway, walk),   
+- How long the trip took ( travel time),    
+- Time of day when the trip took place,    
+- Travel day, day of week, and    
+
+Data on vehicle trips include:    
+
+- Number of people in the vehicle (vehicle occupancy),
+- Driver characteristics (e.g., age, sex, worker status), and
+- Vehicle attributes (e.g., make, model, model year, amount of miles driven in a year)
+
+These data are collected for:     
+
+- All travel trips
+- All travel mode, 
+- All trip purposes,
+- All trip lengths, and
+- All areas of the US, urban and rural   
+
+
+
+
