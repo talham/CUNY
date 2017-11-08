@@ -1,0 +1,65 @@
+<html>
+
+<!--
+The html document develops code to write     
+-->
+
+<head><title>Assignment 5</title></head>
+
+<body>
+
+<h1>Week 10, Data 608</h1>
+<h2>Problem 1</h2>
+
+<script type="text/javascript">
+
+document.write('<p><b>First 20 Multiples of a number</b></p>');
+// Basic functions
+
+// this function takes a number and calculates the first 20 multiples
+function calcmultiples(num){	
+	var calcarray    = new Array();
+		for (var i=1;i<21;i++) {
+		calcarray[(i-1)] = i*num;
+		}
+
+	return (calcarray);
+};
+
+function table_writer(tabarray,num,m1){
+	var myArray    = tabarray;
+    var myTable= "<table><tr><td style='width: 100px; color: blue;'>Multiple Number</td>";
+    myTable+= "<td style='width: 100px; color: blue; text-align: right;'>Multiple of</td>";
+    myTable+="<td style='width: 100px; color: blue; text-align: right;'>Value</td></tr>";
+
+    myTable+="<tr><td style='width: 100px;                   '>______</td>";
+    myTable+="<td     style='width: 100px; text-align: right;'>______</td>";
+    myTable+="<td     style='width: 100px; text-align: right;'>______</td></tr>";
+	
+  for (var i=0; i<num; i++) {
+    myTable+="<tr><td style='width: 100px;'>" + (i+1) + "</td>";
+    myTable+="<td style='width: 100px; text-align: right;'>" + m1 + "</td>";
+    myTable+="<td style='width: 100px; text-align: right;'>" + myArray[i] + "</td></tr>";
+  }  
+   myTable+="</table>";
+
+   return(myTable);
+}
+
+function displayer(){
+    var t = document.getElementById("tab_calc");
+    t.innerHTML = table_writer(calcmultiples(document.getElementById('num2').value),20,document.getElementById('num2').value);
+};
+</script>
+<p>
+<form>
+    <input id="num2" type="number" size="4">
+    <input type="button" value="calculate" onClick="displayer();">
+</form>
+</p>
+
+<div id="tab_calc">
+</div>
+
+</body>
+</html>
