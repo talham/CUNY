@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+			<title>D3: Scaling the Albers USA projection</title>
+			<script src="https://d3js.org/d3.v4.min.js"></script>
+			<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+			<script src="https://d3js.org/topojson.v2.min.js"></script>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.0/d3-legend.min.js"></script>
+			<style type="text/css">
+				/* No style rules here yet */		
+			</style>
+			<h1>Average Vehicle Age in Urban and Rural Areas</h1> 
+		</head>
+		<body>
+			<script type="text/javascript">
+				var margin = {top: 10, right: 10, bottom: 10, left: 10},
+				padding = {top: 60, right: 60, bottom: 20, left: 60},
+				outerWidth = 700,
+				outerHeight = 550,
+				innerWidth = outerWidth - margin.left - margin.right,
+				innerHeight = outerHeight - margin.top - margin.bottom,
+				w = innerWidth - padding.left - padding.right,
+				h = innerHeight - padding.top - padding.bottom;
+
+				//Define map projection
+				var projection = d3.geoAlbersUsa()
+				.translate([w/2, h/2])
+				.scale([700]);
+
+				//Define path generator
+				var path = d3.geoPath()
+				.projection(projection);
+
+				//Create SVG element
+				var svg = d3.select("body")
+				.append("svg")
+				.attr("width", w)
+				.attr("height", h)
+				.append("g")
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+				//.attr("y",300)
+				//.attr("x",100);
+
+				var rural=d3.select("body")
+				.append("svg")
+				.attr("width",w)
+				.attr("height",h)
+				.append("g")
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+				var color_domain = [6, 8, 10, 12, 14,16,18]
+				var ext_color_domain = [0, 50, 150, 350, 750, 1500]
+				var legend_labels = ["2", "6", "8", "10", "12", "16","24+"] 
+
+				//var g=svg.append("g");
+				var color = d3.scaleThreshold()
+				.domain(color_domain)
+				.range(d3.schemeGreens[(color_domain.length-1)]);
+
+				d3.json("https://raw.githubusercontent.com/talham/CUNY/master/Data608/hw6/shapefiles/cb_nation.json", function(json) {
+
+				//Bind data and create one path per GeoJSON feature
+				svg.selectAll("path")
+				.data(json.features)
+				.enter()
+				.append("path")
+				.attr("d", path)
+				.style("fill", "white")
+				.style("stroke","#bfbfbf");
+				});
+
+				//Load in vehicle age data
+				d3.csv("https://raw.githubusercontent.com/talham/CUNY/master/Data608/hw6/Data/vehicle_age.csv", function(data) {
+
+
+				//Load in GeoJSON data
+				d3.json("https://raw.githubusercontent.com/talham/CUNY/master/Data608/hw6/shapefiles/cbsa13.geojson", function(json) {
+
+				//Merge the ag. data and GeoJSON
+				//Loop through once for each ag. data value
+				for (var i = 0; i < data.length; i++) {
+
+						//Grab state name
+						var datacbsa = data[i].HH_CBSA10;
+
+						//Grab data value, and convert from string to float
+						var dataValue = parseFloat(data[i].avg_age);
+
+						//Find the corresponding state inside the GeoJSON
+						for (var j = 0; j < json.features.length; j++) {
+
+								var jsoncbsa = json.features[j].properties.CBSAFP;
+
+								if (datacbsa == jsoncbsa) {
+
+								//Copy the data value into the JSON
+								json.features[j].properties.age = dataValue;
+
+								//Stop looking through the JSON
+								break;
+
+								}
+								}		
+								}
+								//Bind data and create one path per GeoJSON feature
+								svg.selectAll("path")
+								.data(json.features)
+								.enter()
+								.append("path")
+								.attr("d", path)
+								.attr("x",100)
+								.style("fill", function(d) {
+								//Get data value
+								var value = d.properties.age;
+
+								if (value) {
+								//If value exists…
+								return color(value);
+								} else {
+								//If value is undefined…
+								return "#bfbfbf";
+								}
+								});
+								});
+								});	
+
+		d3.csv("https://raw.githubusercontent.com/talham/CUNY/master/Data608/hw6/Data/vehicle_age_rural.csv", function(data) {
+
+												//Set input domain for color scale
+												<!-- color.domain([ -->
+												<!-- d3.min(data, function(d) { return Math.round(d.avg_age); }),  -->
+												<!-- d3.max(data, function(d) { return Math.round(d.avg_age); }) -->
+												<!-- ]); -->
+
+												//Load in GeoJSON data
+										d3.json("https://raw.githubusercontent.com/talham/CUNY/master/Data608/hw6/shapefiles/cb_state_diff_json.geojson", function(json) {
+
+												//Merge the ag. data and GeoJSON
+												//Loop through once for each ag. data value
+												for (var i = 0; i < data.length; i++) {
+
+														//Grab state name
+														var datast = data[i].HHSTFIPS;
+
+														//Grab data value, and convert from string to float
+														var dataValue = parseFloat(data[i].avg_age);
+
+														//Find the corresponding state inside the GeoJSON
+														for (var j = 0; j < json.features.length; j++) {
+
+																var jsonst = json.features[j].properties.STATEFP;
+
+																if (datast == jsonst) {
+
+																//Copy the data value into the JSON
+																json.features[j].properties.age = dataValue;
+
+																//Stop looking through the JSON
+																break;
+
+																}
+																}		
+																}
+																//Bind data and create one path per GeoJSON feature
+																rural.selectAll("path")
+																.data(json.features)
+																.enter()
+																.append("path")
+																.attr("d", path)
+																.style("fill", function(d) {
+																//Get data value
+																var value = d.properties.age;
+
+																if (value) {
+																//If value exists…
+																return color(value);
+																} else {
+																//If value is undefined…
+																return "#bfbfbf";
+																}
+																});
+																});
+																});	
+
+
+																<!-- //var states=svg.append("states"); -->
+																d3.json("https://raw.githubusercontent.com/talham/CUNY/master/Data608/hw6/shapefiles/cb_nation.json", function(json) {
+
+																//Bind data and create one path per GeoJSON feature
+																rural.selectAll("path")
+																.data(json.features)
+																.enter()
+																.append("path")
+																.attr("d", path)
+																.style("fill", "white")
+																.style("stroke","#bfbfbf");
+																});
+
+
+					var linear = d3.scaleLinear()
+								.domain([6,18])
+								.range(["rgb(199, 233, 192)","rgb(0, 109, 44)"]);
+
+								
+
+																svg.append("g")
+																.attr("class", "legendLinear")
+																.attr("transform", "translate(0,0)")
+																.append("text")
+																.text("Average Age in Years").attr("y",50).attr("font","6px sans-serif");
+
+																var legendLinear = d3.legendColor()
+																.shapeWidth(40)
+																.orient('horizontal')
+																.scale(linear);
+
+																svg.select(".legendLinear")
+																.call(legendLinear);
+
+
+		</script>
+	</body>
+</html>
