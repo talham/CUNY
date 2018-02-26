@@ -1,0 +1,173 @@
+---
+title: "Final Class 605"
+author: "Talha Muhammad"
+date: "December 18, 2017"
+output: pdf_document
+---
+```{r, warning=FALSE, message=FALSE}
+setwd("C:/Users/talha/Documents/Training/Kaggle Comps/HousePrice")
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(MASS)
+library(glmnet)
+```
+
+```{r}
+traindata<-read.csv(gzfile("train.csv.gz")) 
+testdata<-read.csv(gzfile("test.csv.gz"))
+sample_submission<-read.csv(gzfile("sample_submission.csv.gz"))
+```
+**Question 1**
+*Probability*   Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 1st quartile of the X variable, and the small letter "y" is estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.  
+a.	 $P(X>x | Y>y)$		b.  $P(X>x,Y>y)$		c.  $P(X<x | Y>y)$		
+Does splitting the training data in this fashion make them independent? In other words, does P(XY)=P(X)P(Y))?   Check mathematically, and then evaluate by running a Chi Square test for association.  You might have to research this.  
+
+$\textrm{The Solution:}\\$
+
+```{r probab}
+#calculate quantiles of X variable
+quantile(traindata$X1stFlrSF)
+#calculate quantiles of y variable
+quantile(traindata$SalePrice)
+#dataset count
+c<-count(traindata)
+#count of X > 1st quartile
+x<-count(traindata,X1stFlrSF>882)[2,2]
+#count of y > 2nd quartile
+y<-count(traindata,SalePrice>163000)[2,2]
+# count of X > 1st quartile & y > 2nd quartile
+x_y<-count(traindata,X1stFlrSF>882,SalePrice>163000)[4,3]
+x_y_2<-count(traindata,X1stFlrSF<882,SalePrice>163000)[4,3]
+#answer a)
+ans_a<-(x_y/c)/(y/c)
+#answer b)
+ans_b<-(x_y/c)
+#answer c)
+ans_c<-(x_y_2/c)/(y/c)
+```
+
+$P(X>x | Y>y)=0.854$      
+
+$P(X>x,Y>y)=0.426$    
+
+$P(X>x,Y>y)=0.1428$    
+
+*Does splitting the training data in this fashion make them independent?* 
+
+If by **this**, we mean the division of data using information from the $X$ and $Y$ variables quantiles then no it does not, since the data are being split based on the quantiles and knowing something about one aspect of the dataset tells alot about the other dataset. However if the data are being split randomly then the resulting subset of the training data would be independent. 
+
+**Question 2**
+*Descriptive and Inferential Statistics.* Provide univariate descriptive statistics and appropriate plots for both variables.   Provide a scatterplot of X and Y.  Transform both variables simultaneously using Box-Cox transformations.  You might have to research this.
+
+$\textrm{The Solution:}\\$
+
+```{r desc}
+#descriptive statistics of First Floor Square Footage
+summary(traindata$X1stFlrSF)
+#descriptive statistics of SalePrice
+summary(traindata$SalePrice)
+#plot of square footage
+ggplot(traindata, aes(X1stFlrSF))+geom_histogram(bins=50,fill="blue")+ggtitle("First Floor Square Footage")
+#plot of sale price data
+ggplot(traindata, aes(SalePrice))+geom_histogram(bins=50,fill="orange")+ggtitle("Sales Price in dollars")
+#provide a scatter plot of X and Y
+traindata$BedroomAbvGr_fc<-as.factor(traindata$BedroomAbvGr)
+ggplot(traindata, aes(X1stFlrSF,SalePrice,color=BedroomAbvGr_fc))+geom_point()+ggtitle("Relationship between Sales Price & Sq Footage")
+####
+#transform variables using box-cox transformations
+bc<-boxcox(lm(SalePrice~X1stFlrSF,data=traindata),lambda=seq(-0.5,1,by=0.05))
+lambda<-bc$x[which.max(bc$y)]
+###plot a scatter plot of the transformed
+traindata$SalePrice_trans<-((traindata$SalePrice)^lambda)/lambda
+ggplot(traindata, aes(X1stFlrSF,SalePrice_trans,color=BedroomAbvGr_fc))+geom_point()+ggtitle("Relationship between Sales Price & Transformed Sq Footage")
+```
+
+** Question 3**
+*Linear Algebra and Correlation*.   Using at least three untransformed variables, build a correlation matrix.  Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix.
+
+$\textrm{The Solution:}\\$
+
+```{r algebra}
+corr_data<-dplyr::select(traindata,SalePrice,X1stFlrSF,X2ndFlrSF,GrLivArea)
+cormat<-cor(corr_data,use="complete.obs")
+cormat
+###inverse matrix with VIF's in the diagonal
+ginv(cormat)
+###check
+round(cormat%*%ginv(cormat),8)
+round(ginv(cormat)%*%cormat,8)
+```
+
+Multiplication of the correlation matrix and the inverse gives the identity matrix.  
+
+**Question 4**
+*Calculus-Based Probability & Statistics*.  Many times, it makes sense to fit a closed form distribution to data.  For your non-transformed independent variable, location shift (if necessary)  it so that the minimum value is above zero.  Then load the MASS package and run fitdistr to fit a density function of your choice  Find the optimal value of the parameters for this distribution, and then take 1000 samples from this distribution (e.g., rexp(1000, ???) for an exponential).  Plot a histogram and compare it with a histogram of your non-transformed original variable.   
+
+$\textrm{The Solution:}\\$
+
+```{r prob}
+params<-fitdistr(traindata$X1stFlrSF,"gamma")
+histdata<-as.data.frame(traindata$X1stFlrSF)
+histdata<-histdata %>% rename(X1stFlrSf=`traindata$X1stFlrSF`)
+histdata$sim<-rgamma(length(traindata$X1stFlrSF),shape=params$estimate[1],rate=params$estimate[2])
+rshphist<-histdata %>% gather(val)
+ggplot(rshphist, aes(x=value, fill=val)) + geom_histogram(alpha=0.3, position="identity",bins=50)+ggtitle("Comparison of Plots")
+```
+
+
+**Question 5**
+*Modeling*  Build some type of regression model and submit your model to the competition board.  Provide your complete model summary and results with analysis. 
+```{r analysis}
+sub_data<-dplyr::select(traindata,SalePrice,X1stFlrSF,X2ndFlrSF,GrLivArea,GarageCars,LotArea,TotalBsmtSF,BedroomAbvGr,FullBath,HalfBath,KitchenQual,YearBuilt,YrSold,OverallCond,OverallQual,Neighborhood,Condition1,SaleCondition)
+pairs(sub_data[1:15],cex=0.7,cex.labels=0.7,col="blue")
+ggplot(sub_data, aes(OverallQual,SalePrice,color=Neighborhood))+geom_point()
+ggplot(sub_data, aes(GrLivArea,SalePrice,color=Condition1))+geom_point()
+ggplot(sub_data, aes(GrLivArea,SalePrice,color=SaleCondition))+geom_point()
+###
+round(cor(sub_data[1:10]),3)
+```
+
+Based on the review of the pair plots, the individual plots on the sale prices and the drivers of value of home prices, and the correlation matrices, a few models suggest themselves. 
+A number of variables seem to be highly correlated with higher sale prices. 
+These include: 
+1. Above Ground Living Area
+2. GarageCars
+3. Total Basement Square footage
+4. Number of Full Baths
+5. YearBuilt
+6. Overall material and finish of the house
+
+Additional variables that might be of interest would be the surrounding conditions of the house, Cond1 - houses closer to a railroad would be worth less, Salecondition i.e. short sales and foreclosures would generally sell for a lower price. We include YearBuilt directly in the model rather than the Age at time of sale, since property sales in the dataset took place during 2006-2010.  
+
+```{r model}
+lm.fit=glm(log(SalePrice)~GrLivArea+BedroomAbvGr+FullBath,data=sub_data)
+summary(lm.fit)
+lm.fit2=lm(log(SalePrice)~GrLivArea+FullBath+OverallQual,data=sub_data)
+summary(lm.fit2)
+lm.fit3=lm(log(SalePrice)~GrLivArea+FullBath+OverallQual+Condition1,data=sub_data)
+summary(lm.fit3)
+lm.fit4=lm(log(SalePrice)~GrLivArea+OverallQual+YearBuilt,data=sub_data[c(-1299,-524,-496,-31),])
+summary(lm.fit4)
+```
+
+```{r kaggle}
+#submission 1
+submission1<-data.frame(testdata$Id,exp(predict(lm.fit,newdata=testdata)))
+submission1<-submission1 %>% rename(Id=testdata.Id,SalePrice=exp.predict.lm.fit..newdata...testdata..)
+write.csv(submission1,file="submission1.csv",row.names = FALSE)
+#submission 2
+submission2<-data.frame(testdata$Id,exp(predict(lm.fit2,newdata=testdata)))
+submission2<-submission2 %>% rename(Id=testdata.Id,SalePrice=exp.predict.lm.fit2..newdata...testdata..)
+write.csv(submission2,file="submission2.csv",row.names = FALSE)
+#submission 3
+submission3<-data.frame(testdata$Id,exp(predict(lm.fit3,newdata=testdata)))
+submission3<-submission3 %>% rename(Id=testdata.Id,SalePrice=exp.predict.lm.fit3..newdata...testdata..)
+write.csv(submission3,file="submission3.csv",row.names = FALSE)
+#submission 4
+submission4<-data.frame(testdata$Id,exp(predict(lm.fit4,newdata=testdata)))
+submission4<-submission4 %>% rename(Id=testdata.Id,SalePrice=exp.predict.lm.fit4..newdata...testdata..)
+write.csv(submission4,file="submission4.csv",row.names = FALSE)
+```
+
+Kaggle user name: **econ_geek**, score: **0.17876**, rank: **2209**
