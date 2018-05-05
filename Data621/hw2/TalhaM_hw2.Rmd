@@ -1,0 +1,281 @@
+---
+title: "Talha Muhammad Homework 2"
+author: "Talha Muhammad"
+date: "March 11, 2018"
+output:
+  html_document: default
+  pdf_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+## Home work 2
+
+```{r, warning=FALSE, echo=FALSE}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(pROC)
+```
+#### Question 1
+Download the classification output data set (attached in Blackboard to the assignment).
+
+$\textrm{The Solution:}\\$
+
+Load and analyze dataset. 
+
+```{r}
+setwd('C:/Users/talha/Documents/Training/CUNY Classes/Data 621/hw2')
+class<-read.csv("classification-output-data.csv")
+head(class)
+summary(class)
+```
+
+#### Question 2
+The data set has three key columns we will use:
+class: the actual class for the observation
+scored.class: the predicted class for the observation (based on a threshold of 0.5)
+scored.probability: the predicted probability of success for the observation
+
+Use the table() function to get the raw confusion matrix for this scored dataset. Make sure you understand the output. In particular, do the rows represent the actual or predicted class? The columns?
+
+$\textrm{The Solution:}\\$
+
+class is the actual class of the dataset. Scored class is the model predicted class and probability is the model predicted probability. 
+
+The columns represent "predicted" values and the rows represent the "actual".
+
+
+```{r}
+table(class$class, class$scored.class, dnn=c("Actual","Predicted"))
+```
+
+#### Question 3
+Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the accuracy of the predictions.
+
+$\textrm{The Solution:}\\$
+
+```{r q3}
+#explore the data briefly
+ggplot(class, aes(bmi,glucose, color=class))+geom_point()
+#develop the accuracy of predictions
+accuracy<-function(df,cl1,cl2){
+  a=table(df[,cl1], df[,cl2], dnn=c(cl1,cl2))  
+  acc=(a[1,1]+a[2,2])/(a[1,1]+a[2,2]+a[1,2]+a[2,1])
+  return(acc)
+}
+
+print ("Prediction Accuracy")
+accuracy(class,cl1="class",cl2="scored.class")
+```
+
+#### Question 4
+Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the classification error rate of the predictions.
+
+Verify that you get an accuracy and an error rate that sums to one.
+
+
+$\textrm{The Solution:}\\$
+
+```{r q4}
+class_err<-function(df,cl1,cl2){
+  a=table(df[,cl1], df[,cl2], dnn=c(cl1,cl2))  
+  cerr=(a[1,2]+a[2,1])/(a[1,1]+a[2,2]+a[1,2]+a[2,1])
+  return(cerr)
+}
+
+print ("Classification Error")
+class_err(class,cl1="class",cl2="scored.class")
+
+#verify accuracy and classification sum to one
+print ("Classification + Accuracy")
+class_err(class,cl1="class",cl2="scored.class")+accuracy(class,cl1="class",cl2="scored.class")
+
+```
+
+#### Question 5
+
+Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the precision of the predictions.
+
+$\textrm{The Solution:}\\$
+
+```{r q5}
+precision<-function(df,cl1,cl2){
+  a=table(df[,cl1], df[,cl2], dnn=c(cl1,cl2))  
+  pres=(a[2,2])/(a[2,2]+a[1,2])
+  return(pres)
+}
+
+print ("Precision")
+precision(class,cl1="class",cl2="scored.class")
+
+```
+
+#### Question 6
+
+Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the sensitivity of the predictions. Sensitivity is also known as recall.
+
+$\textrm{The Solution:}\\$
+
+```{r q6}
+
+sensitivity<-function(df,cl1,cl2){
+  a=table(df[,cl1], df[,cl2], dnn=c(cl1,cl2))  
+  if(dim(a)[1]==dim(a)[2]){ # check if truth table is 2x2
+  sens=(a[2,2])/(a[2,2]+a[2,1])
+  }
+  else {
+    sens=0
+  }
+  return(sens)
+}
+
+print ("Sensitivity")
+sensitivity(class,cl1="class",cl2="scored.class")
+
+```
+
+#### Question 7
+
+Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the specificity of the predictions.
+
+$\textrm{The Solution:}\\$
+
+```{r q7}
+
+specificity<-function(df,cl1,cl2){
+  a=table(df[,cl1], df[,cl2], dnn=c(cl1,cl2))  
+  if (dim(a)[1]==dim(a)[2]){
+  spec=(a[1,1])/(a[1,1]+a[1,2])
+  }
+  else {
+    spec=1
+  }
+  return(spec)
+}
+
+print ("Specificity")
+specificity(class,cl1="class",cl2="scored.class")
+```
+
+
+#### Question 8
+
+Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the F1 score of the predictions
+
+$\textrm{The Solution:}\\$
+
+```{r q8}
+#F1 Score: 
+
+f1_score<-function(df,cl1,cl2){
+  a=precision(df,cl1,cl2)
+  b=sensitivity(df,cl1,cl2)
+  f1=(2*a*b)/(a+b)
+  return(f1)
+}
+
+f1_score(class,cl1="class",cl2="scored.class")
+
+```
+
+
+#### Question 9
+What are the bounds on the F1 score? Show that the F1 score will always be between 0 and 1.
+
+
+$\textrm{The Solution:}\\$
+
+The definition of Sensitivity is: 
+\[
+Sensitivity=\frac{TP}{TP+FN}\\
+Precision=\frac{TP}{TP+FP}\\
+\]
+
+Maximum senstivitiy occurs if False Negatives are zero and sensitivity is equal to 1. Minimum sensitivity is equal to zero where are no true positives.    
+Maximum precision occurs if False Positives are zero and precision is equal to 1. Minimum precision occurs when there are zero true positives.   
+
+\[
+\\
+Case1\\
+Precision=1,\ Senstivity=1\\
+\rightarrow \frac{2*1*1}{1+1}=1 \\
+\\
+\]
+
+\[
+Case 2\\
+Precision=x \rightarrow 0  Sensitivty=y \rightarrow 0\\
+\rightarrow \frac{2*x*y}{x+y}\\
+let\ x=y\ or\ x>y\ then\\
+\rightarrow \frac{2*x*y}{x+y}=\ \frac{2x^2}{2y}=\frac{x^2}{y}<1
+\]
+
+#### Question 10
+Write a function that generates an ROC curve from a data set with a true classification column (class in our example) and a probability column (scored.probability in our example). Your function should return a list that includes the plot of the ROC curve and a vector that contains the calculated area under the curve (AUC). Note that I recommend using a sequence of thresholds ranging from 0 to 1 at 0.01 intervals.
+
+$\textrm{The Solution:}\\$
+
+The ROC curve is a way to visualize model performance. Each point of the ROC curve consists of a "truth" table, calculated for a given threshold of the scored probability. Typically, for a ROC curve, the y axis represents the **true positive rate** or **sensitivity**. The x axis represents the **false positive rate** or **(1 - specificity)**. 
+
+```{r q10}
+roc_plot<-function(df,cl1,cl2,inc) {
+  y=1/inc
+  s=inc
+  roc_data<-data.frame(count=1:y,sens=0,spec=0)
+for(i in 1:y){
+  df$scored_p[df[,cl2]<=s]<-0
+  df$scored_p[df[,cl2]>s]<-1
+  roc_data$sens[i]<-sensitivity(df,cl1,"scored_p")
+  roc_data$spec[i]<-1-specificity(df,cl1,"scored_p")
+  s=s+inc
+  df$scored_p<-NULL
+}
+return(roc_data)
+}
+#class$scored_p[class$scored.probability<0.5]<-0
+
+b<-roc_plot(class,cl1="class",cl2="scored.probability",inc=0.01)
+
+c<-ggplot()+geom_line(data=arrange(b,sens),aes(spec,sens),color="blue")+geom_point(data=b,aes(spec,sens))+xlab("False Positive Rate (1-Specificity)")+ylab("True Positive Rate(Sensitivity)")
+d<-data.frame(seq(0,1,0.1),seq(0,1,0.1))
+names(d)[1]<-"sens"
+names(d)[2]<-"spec"
+c+geom_line(data=d,aes(spec,sens),linetype=2)
+```
+
+#### Question 11
+Use your created R functions and the provided classification output data set to produce all of the classification metrics discussed above.
+
+$\textrm{The Solution:}\\$
+
+
+```{r, q11}
+print ("Prediction Accuracy")
+accuracy(class,cl1="class",cl2="scored.class")
+
+print ("Classification Error")
+class_err(class,cl1="class",cl2="scored.class")
+
+print ("Precision")
+precision(class,cl1="class",cl2="scored.class")
+
+print ("Sensitivity")
+sensitivity(class,cl1="class",cl2="scored.class")
+
+print ("Specificity")
+specificity(class,cl1="class",cl2="scored.class")
+
+print("F1 Score")
+f1_score(class,cl1="class",cl2="scored.class")
+```
+
+#### Question 13
+Investigate the pROC package. Use it to generate an ROC curve for the data set. How do the results compare with your own functions?
+
+$\textrm{The Solution:}\\$
+The plots are quite similar to what has been developed by above. 
+
+```{r, q13}
+roc(class$class,class$scored.probability,plot=TRUE)
+```
