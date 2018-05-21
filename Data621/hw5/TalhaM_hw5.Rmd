@@ -1,0 +1,1005 @@
+---
+title: "Homework 5 Assignment"
+author: "Talha Muhammad"
+date: "May 5, 2018"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r, warning=FALSE, echo=FALSE, error=FALSE,message=FALSE}
+library(kableExtra)
+library(knitr)
+library(ggplot2)
+library(gridExtra)
+library(tidyr)
+library(dplyr)
+library(robustbase)
+library(leaps)
+library(DescTools)
+library(nlme)
+library(tinytex)
+library(Hmisc)
+library(reshape2)
+library(pscl)
+library(MASS)
+library(faraway)
+```
+     
+     
+       
+        
+        
+Analysis of the Wine Sales Dataset
+    
+    
+    
+
+\newpage
+
+
+```{r, echo=FALSE}
+setwd('C:/Users/talha/Documents/Training/CUNY Classes/Data 621/hw5')
+wine<-read.csv("wine-training-data.csv")
+wine_eval<-read.csv("wine-evaluation-data.csv")
+```
+
+### Dataset Description
+
+The dataset is a wine sales and associated attributes dataset that contains the number of cases sold of a particular wine as the forecast variable. Other variables are the attributes of the particular wine related to taste or acidity. It also includes marketing related variables such as the attractiveness of the label and expert reviews of the wine.  
+
+
+```{r, echo=FALSE}
+text_tbl <- data.frame(
+  variable = c("TARGET", "FixedAcdity", "VolatileAcidity","CitricAcid","ResidualSugar","Chlorides","FreeSulfurDioxide","TotalSulfurDioxide","Density","pH","Sulphates","Alcohol","LabelAppeal","AcidIndex","Stars","F_ACID_N_FLAG","V_ACID_N_FLAG","C_ACID_N_FLAG","Rsugar_N_FLAG","chl_N_FLAG","free_sox_N_FLAG","tot_sox_N_FLAG","sulphates_N_FLAG","alcohol_N_FLAG","ResidualSugar_I_FLAG","chlorides_I_FLAG","free_sox_I_FLAG","tot_sox_I_FLAG","ph_I_FLAG","suphates_I_FLAG","alcohol_I_FLAG","stars_I_FLAG"),
+  description = c(
+    "Number of cases purchased ",
+    "Fixed Acidity of wine", 
+    "Volatile Acidity of wine",
+    "Citric Acidity of wine",
+    "Residual Sugar of wine",
+    "Chloride content of wine",
+    "Free Sulphur Dioxide content",
+    "Total Sulphur Dioxide",
+    "Density of Wine",
+    "pH of wine",
+    "Sulphate Content of Wine",
+    "Alcohol content",
+    "Marketing score of the label",
+    "Acid Index of wine",
+    "Wine Rating by team of experts",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating original negative value converted to positive",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value",
+    "Flag indicating imputed value"),
+  type=c("Original","Original","Original","Original","Original","Original","Original","Original","Original","Original","Original","Original","Original","Original","Original","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated","Calculated")
+)
+
+kable(text_tbl, "latex") %>%
+  kable_styling(full_width = F) %>%
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "20em") %>%
+  column_spec(3, width = "10em")
+```
+
+The table below shows all the variable names in the dataset and also identifies whether the variables are original in the dataset or have been computed as part of the analysis. In particular, a number of variables are computed which are not part of the original dataset. These variables are computed as flags and are used as identification variables, identifying which varables were imputed or changed. 
+
+\newpage
+
+### 1. DATA EXPLORATION (25 Points)
+Describe the size and the variables in the wine training data set. Consider that too much detail will cause a manager to lose interest while too little detail will make the manager consider that you aren't doing your job. Some suggestions are given below. Please do NOT treat this as a check list of things to do to complete the assignment. You should have your own thoughts on what to tell the boss. These are just ideas.
+a. Mean / Standard Deviation / Median
+b. Bar Chart or Box Plot of the data
+c. Is the data correlated to the target variable (or to other variables?)
+d. Are any of the variables missing and need to be imputed "fixed"?
+
+**Solution**
+
+The plot below shows the distribution of **TARGET**, the number of cases sold. The plot shows a bimodal distribution, with a high count of zeros, and then another mode at 4. Excluding the zero values the distribution does resemble a normal, but primarily consists of count variables. Additional, the target is composed entirely of integer values. 
+
+```{r, echo=FALSE}
+p1<-ggplot(wine,aes(TARGET))+geom_bar(color="orange", fill="orange", alpha=0.5)
+p1
+```
+
+The tables below show the means and medians of the data. Means and medians are calculated such that any missing NA values are excluded when calculating the metrics. For a few variables there is a large difference between the mean values adn median values. These include **FreeSulfurdioxide**, **ResidualSugar**, **TotalSulfulurdioxide**, and **Sulphates**. 
+
+```{r, echo=FALSE}
+#a=data.frame()
+round(summarise_all(wine[,2:16],mean,na.rm=TRUE),2) %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down"))%>% add_header_above(c("Means"=15)) 
+round(summarise_all(wine[,2:16],median,na.rm=TRUE),2) %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down"))%>% add_header_above(c("Medians"=15)) 
+```
+
+We do some further analysis on the data, to understand the missing values in the data. The tables below show the counts and proportions of missing values in the dataset. For most of the variables only about 5 percent of the data are missing. There are a few exceptions thought, for example for **Sulphates** about 10 percent of the data are missing and for rating of the wine, measured by **STARS** about 26 percent of the data are missing. 
+
+```{r, missing_values, echo=FALSE, warning=FALSE}
+#missing values
+missing_vals<-as.data.frame(table(complete.cases(wine$ResidualSugar))) 
+b<-as.data.frame(table(complete.cases(wine$Chlorides)))
+c<-as.data.frame(table(complete.cases(wine$FreeSulfurDioxide)))
+d<-as.data.frame(table(complete.cases(wine$TotalSulfurDioxide)))
+e<-as.data.frame(table(complete.cases(wine$pH)))
+f<-as.data.frame(table(complete.cases(wine$Sulphates)))
+g<-as.data.frame(table(complete.cases(wine$Alcohol)))
+h<-as.data.frame(table(complete.cases(wine$STARS)))
+#merge data frames
+missing_vals<-merge(missing_vals,b,by="Var1")
+missing_vals<-merge(missing_vals,c,by="Var1")
+missing_vals<-merge(missing_vals,d,by="Var1")
+missing_vals<-merge(missing_vals,e,by="Var1")
+missing_vals<-merge(missing_vals,f,by="Var1")
+missing_vals<-merge(missing_vals,g,by="Var1")
+missing_vals<-merge(missing_vals,h,by="Var1")
+
+
+names(missing_vals)<-c("Complete / Not Missing","ResidualSugar","Chlorides","FreeSulfurDioxide","TotalSulfurDioxide","pH","Sulphates","Alcohol","STARS")
+
+missing_vals %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down")) %>% add_header_above(c("Category "=1,"Counts"=8))
+
+round(prop.table(as.matrix(missing_vals[,2:9]),2),3) %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F) %>% add_header_above(c("Proportions of Missing"=8))
+#delete temp tables
+rm(b,c,d,e,f,g,h)
+```
+
+The difference between median and mean values of the data invites some further investigation. It turns out that a number of variables have negative values. Given, many of these represent real wine qualities, such **CitricAcid** it is not concievable that these quantities can actually be negative. Two possibilities exist,     
+1) The data are actually positive and have a negative number by mistake or through data errors   
+2) The negative values are not reliable and need to be treated as missing values     
+    
+The tables below show the absolute number and proportion of negative values in the dataset. For a number of the variables, the proportion of negative values is quite high, i.e. above 20 percent. For only **Alcohol** and **FixedAcidity** are the proportions of negative values less than 13 percent.     
+
+Using the approach in **2)** above would require potentially losing information, since the absolute values are likely indicative. Therefore I use the approach in **1)** to deal with the missing values.  
+
+```{r, negative_values, echo=FALSE, warning=FALSE}
+#negative values
+negative_vals<-as.data.frame(table(negative=wine$FixedAcidity<0, useNA="no"))
+b<-as.data.frame(table(negative=wine$VolatileAcidity<0, useNA="no"))
+c<-as.data.frame(table(negative=wine$CitricAcid<0, useNA="no"))
+d<-as.data.frame(table(negative=wine$ResidualSugar<0, useNA="no"))
+e<-as.data.frame(table(negative=wine$Chlorides<0, useNA="no"))
+f<-as.data.frame(table(negative=wine$FreeSulfurDioxide<0, useNA="no"))
+g<-as.data.frame(table(negative=wine$TotalSulfurDioxide<0, useNA="no"))
+h<-as.data.frame(table(negative=wine$Sulphates<0, useNA="no"))
+i<-as.data.frame(table(negative=wine$Alcohol<0, useNA="no"))
+
+#merge data frames
+negative_vals<-merge(negative_vals,b,by="negative")
+negative_vals<-merge(negative_vals,c,by="negative")
+negative_vals<-merge(negative_vals,d,by="negative")
+negative_vals<-merge(negative_vals,e,by="negative")
+negative_vals<-merge(negative_vals,f,by="negative")
+negative_vals<-merge(negative_vals,g,by="negative")
+negative_vals<-merge(negative_vals,h,by="negative")
+negative_vals<-merge(negative_vals,i,by="negative")
+
+names(negative_vals)<-c("Negative","FixedAcidity","VolatileAcidity","CitricAcid","ResidualSugar","Chlorides","FreeSulphurdioxide","TotalSulphurdioxide","Sulphates","Alcohol")
+
+negative_vals %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down")) %>% add_header_above(c("Category "=1,"Counts of Negative Values"=9))
+round(prop.table(as.matrix(negative_vals[,2:10]),2),3) %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down")) %>% add_header_above(c("Proportions of Negative Values"=9))
+#delete temp tables
+rm(b,c,d,e,f,g,h,i)
+```
+
+The figure below shows pair plots of the wine database. Only the original variables are shown, without any imputation of missing values. However, variables that have negative values are converted to absolute values.     
+
+The first plot shows a relationship between **FixedAcidity**, **VolatileAcidity**, **pH**, **Citric Acid**, **Residual Sugar ** and **Chlorides**. The diagonals show histograms of the data variables. Except for **pH** which has the most normal-like distribution, the other variables have rather skewed distributions. There none very strong patterns in the data however, it does seem that high sale wines tend to have higher acidity - i.e. lower pH; although most wines have pH in the range of 2-4. 
+
+
+```{r, echo=FALSE, warning=FALSE}
+## put histograms on the diagonal
+panel.hist <- function(x, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5) )
+    h <- hist(x, plot = FALSE)
+    breaks <- h$breaks; nB <- length(breaks)
+    y <- h$counts; y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, ...)
+}
+
+pairs(TARGET~abs(FixedAcidity)+abs(VolatileAcidity)+pH+abs(CitricAcid)+abs(ResidualSugar)+abs(Chlorides), diag.panel=panel.hist,data=wine, cex=0.3, col="blue", lower.panel=NULL, label=c("TARGET","FixedAcidity","VolatileAcidity","pH","CriticAcid","ResidualSugar","Chlorides"), cex.labels=0.5, font.labels=0.5, main="Pairs Plots of Select Variables")
+```
+
+The pair plots below show the relationship between **TARGET** and additonal variablesi in the dataset, including variables capturing the sulphur content of the wine. It does seem that low sulpher content wines are more popular but the relationship does seem weak. Alcohol content also does seem to play an interesting role with some very high alcohol content wines being relatively popular, but most wines with medium alcohol content being most popular.   
+
+
+```{r, echo=FALSE, warning=FALSE}
+pairs(jitter(TARGET,amount=0.1)~abs(FreeSulfurDioxide)+abs(TotalSulfurDioxide)+Density+abs(Sulphates)+abs(Alcohol),data=wine, cex=0.4, col="blue", lower.panel=NULL, label=c("TARGET","Free Sulphr Oxide","Total Sulphur Oxide", "Density","Sulphates", "Alchol"), diag.panel=panel.hist, cex.labels=0.5, font.labels=0.5,main="Pairs Plots of Select Variables")
+```
+
+The plots below some addtional plots of select variables. From the plots it is clear that amongst the strongest predictors of wine sales are the label appeal and the star rating of the wine. The star rating accounts for the full taste of the wine, with highest rated wines generally accounting for the greatest number of sales. 
+
+```{r, echo=FALSE, warning=FALSE}
+pairs(jitter(TARGET,amount=0.1)~jitter(LabelAppeal,amount=0.2)+jitter(AcidIndex, amount=0.2)+jitter(STARS,amount=0.2),data=wine, cex=0.4, col="Orange", lower.panel=NULL, label=c("TARGET","LabelAppeal","AcidIndex","Stars"), main="Pairs Plots of Select Variables")
+```
+
+Bar plots of **LabelAppead**, **AcidIndex** and **STARS** are shown below. Missing values are excluded from the analysis. Most wines seem to have **AcidIndex** of 7 or 8. Label appeal of most wines is average with only a few wines being rated 4-star. 
+
+```{r, echo=FALSE, warning=FALSE}
+p2<-ggplot(wine,aes(LabelAppeal))+geom_bar(color="orange", fill="orange", alpha=0.5)
+p3<-ggplot(wine,aes(AcidIndex))+geom_bar(color="orange", fill="orange", alpha=0.5)
+p4<-ggplot(wine,aes(STARS))+geom_bar(color="orange", fill="orange", alpha=0.5)
+grid.arrange(p2,p3,p4,nrow=1)
+```
+
+
+### 2. DATA PREPARATION (25 Points)     
+Describe how you have transformed the data by changing the original variables or creating new variables. If you did transform the data or create new variables, discuss why you did this. Here are some possible transformations.
+a. Fix missing values (maybe with a Mean or Median value)
+b. Create flags to suggest if a variable was missing
+c. Transform data by putting it into buckets
+d. Mathematical transforms such as log or square root (or use Box-Cox)
+e. Combine variables (such as ratios or adding or multiplying) to create new variables
+
+**Solution**
+
+As a first step we convert the negative values in the data as discussed above, to absolute values. We also generate flags for the variables that have been transformed. Code for this analysis can be found in the appendix. 
+
+
+```{r, echo=FALSE, warning=FALSE}
+#deal with negative values
+#Fixed Acidity
+wine$F_ACID_N_FLAG<-0
+wine$F_ACID_N_FLAG[wine$FixedAcidity<0]<-1
+wine<-wine %>% mutate(FixedAcidity=abs(FixedAcidity))
+#Volatile Acidity
+wine$V_ACID_N_FLAG<-0
+wine$V_ACID_N_FLAG[wine$VolatileAcidity<0]<-1
+wine<-wine %>% mutate(VolatileAcidity=abs(VolatileAcidity))
+#Citric Acid
+wine$C_ACID_N_FLAG<-0
+wine$C_ACID_N_FLAG[wine$CitricAcid<0]<-1
+wine<-wine %>% mutate(CitricAcid=abs(CitricAcid))
+#Residual Sugar
+wine$Rsugar_N_FLAG<-0
+wine$Rsugar_N_FLAG[wine$ResidualSugar<0]<-1
+wine<-wine %>% mutate(ResidualSugar=abs(ResidualSugar))
+#Chlorides
+wine$Chl_N_FLAG<-0
+wine$Chl_N_FLAG[wine$Chlorides<0]<-1
+wine<-wine %>% mutate(Chlorides=abs(Chlorides))
+#Freesulphur
+wine$free_sox_N_FLAG<-0
+wine$free_sox_N_FLAG[wine$FreeSulfurDioxide<0]<-1
+wine<-wine %>% mutate(FreeSulfurDioxide=abs(FreeSulfurDioxide))
+#Totalsulphur
+wine$tot_sox_N_FLAG<-0
+wine$tot_sox_N_FLAG[wine$TotalSulfurDioxide<0]<-1
+wine<-wine %>% mutate(TotalSulfurDioxide=abs(TotalSulfurDioxide))
+#Sulphates
+wine$sulphates_N_FLAG<-0
+wine$sulphates_N_FLAG[wine$Sulphates<0]<-1
+wine<-wine %>% mutate(Sulphates=abs(Sulphates))
+#Alcohol
+wine$alcohol_N_FLAG<-0
+wine$alcohol_N_FLAG[wine$Alcohol<0]<-1
+wine<-wine %>% mutate(Alcohol=abs(Alcohol))
+```
+
+
+As a second step, we impute missing values in the dataset. For most of the variables shown below we impute the missing values as the median of the dataset. The medians are calculated after transformations of the negative values in the data. The code can be found in the **appendix**. 
+
+```{r, echo=FALSE, warning=FALSE}
+#impute missing variables
+#impute ResdiualSugar
+wine$ResidualSugar_I_FLAG<-0
+wine$ResidualSugar_I_FLAG[is.na(wine$ResidualSugar)]<-1
+wine$ResidualSugar[is.na(wine$ResidualSugar)]<-median(wine$ResidualSugar,na.omit(TRUE))
+#Chlorides
+wine$Chlorides_I_FLAG<-0
+wine$Chlorides_I_FLAG[is.na(wine$Chlorides)]<-1
+wine$Chlorides[is.na(wine$Chlorides)]<-median(wine$Chlorides,na.omit(TRUE))
+#Free SulfurDioxide
+wine$free_sox_I_FLAG<-0
+wine$free_sox_I_FLAG[is.na(wine$FreeSulfurDioxide)]<-1
+wine$FreeSulfurDioxide[is.na(wine$FreeSulfurDioxide)]<-median(wine$FreeSulfurDioxide,na.omit(TRUE))
+#Total SulfurDioxide
+wine$tot_sox_I_FLAG<-0
+wine$tot_sox_I_FLAG[is.na(wine$TotalSulfurDioxide)]<-1
+wine$TotalSulfurDioxide[is.na(wine$TotalSulfurDioxide)]<-median(wine$TotalSulfurDioxide,na.omit(TRUE))
+#pH
+wine$ph_I_FLAG<-0
+wine$ph_I_FLAG[is.na(wine$pH)]<-1
+wine$pH[is.na(wine$pH)]<-median(wine$pH,na.omit(TRUE))
+#Sulphates
+wine$sulphates_I_FLAG<-0
+wine$sulphates_I_FLAG[is.na(wine$Sulphates)]<-1
+wine$Sulphates[is.na(wine$Sulphates)]<-median(wine$Sulphates,na.omit(TRUE))
+#Alcohol
+wine$alcohol_I_FLAG<-0
+wine$alcohol_I_FLAG[is.na(wine$Alcohol)]<-1
+wine$Alcohol[is.na(wine$Alcohol)]<-median(wine$Alcohol,na.omit(TRUE))
+```
+
+While for most of the variables using the median to impute the data is sufficient in the case of the **STARS** variable, distribution of sales for missing STARS data and non-misssing stars data is significantly different as shown in the table below. Stars not missing data is almost normally distributed relative to sales. For missing stars data, a number of wines have zero sales - this indicates that these wines are not well known which is why the expert panel did not rate them.  
+
+```{r, echo=FALSE}
+#plot of Stars 
+par(mfrow=c(1,2))
+hist(wine$TARGET[!is.na(wine$STARS)],breaks=20,freq=TRUE, col="blue",xlab="TARGET", main="STARS Not Missing")
+hist(wine$TARGET[is.na(wine$STARS)],breaks=20,freq=TRUE, col="blue",xlab="TARGET", main="STARS Missing")
+par(mfrow=c(1,1))
+```
+
+Imputation code for the stars variable is shown below. We first generate a flag variable to track all missing stars data. To impute missing stars variable, we conduct a two step process. We first look at the median value of all sales i.e. **TARGET** that have missing values. The median value of **TARGET** is zero. For the missing values, we  impute the median number of stars of the **TARGET** with zero sales.      
+
+```{r}
+#STARS
+wine$stars_I_FLAG<-0
+wine$stars_I_FLAG[is.na(wine$STARS)]<-1
+#median TARGET for NA / Missing stars
+median(wine$TARGET[is.na(wine$STARS)])
+#Impute median for missing stars
+wine$STARS[is.na(wine$STARS)]<-median(wine$STARS[wine$TARGET==0],na.omit(TRUE))
+```
+
+### 3. Build Models (25 Points)
+Using the training data set, build at least two different poisson regression models, at least two different negative binomial regression models, and at least two multiple linear regression models, using different variables (or the same variables with different transformations). Sometimes poisson and negative binomial regression models give the same results. If that is the case, comment on that. Consider changing the input variables if that occurs so that you get different models. Although not covered in class, you may also want to consider building zero-inflated poisson and negative binomial regression models. You may select the variables manually, use an approach such as Forward or Stepwise, use a different approach such as trees, or use a combination of techniques. Describe the techniques you used. If you manually selected a variable for inclusion into the model or exclusion into the model, indicate why this was done.
+Discuss the coefficients in the models, do they make sense? In this case, about the only thing you can comment on is the number of stars and the wine label appeal. However, you might comment on the coefficient and magnitude of variables and how they are similar or different from model to model. For example, you might say "pH seems to have a major positive impact in my poisson regression model, but a negative effect in my multiple linear regression model". Are you keeping the model even though it is counter intuitive? Why? The boss needs to know.
+
+**Solution**     
+
+The plot below shows a correlation plot of variables included in the analysis. The variables included are all the original variables as well as all the computed variables. It is clear that most of the variables do not exhibit high correlation with the target variable and do some very low correlation between themselves i.e multicollinearity does not seem to be a big problem for this database. 
+
+Only a few variables have strong correlations with the **TARGET** variable. These include **LabelAppeal**, **AcidIndex** and **Stars**. It does seem that **STARS** and **LabelAppeal** have some correlation (0.3) but not extremely high to pose a multicollinearity problem.  
+
+```{r,echo=FALSE}
+# Get upper triangle of the correlation matrix
+get_upper_tri <- function(cormat){
+  cormat[lower.tri(cormat)]<- NA
+  return(cormat)
+}
+
+#get correlations
+res2<-rcorr(as.matrix(wine[,2:33]))
+#extract upper triangle of correlations
+res2_corr<-get_upper_tri(res2$r)
+melted_res2 <- melt(res2_corr, na.rm = TRUE)
+
+
+#correlation plot
+ggplot(data = melted_res2, aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation")+theme(axis.text.x = element_text(angle = 90,vjust = 0.5, size = 8, hjust = 1))+coord_fixed()+labs(title="Correlation Plot")
+
+```
+
+Sorted correlations are shown in the table below. **AcidIndex** and the imputed stars variables **STARS_I_FLAG** have the highest negative correlations while **Alcohol**, **LabelAppeal** and **STARS** have the highest positive correlations. 
+
+```{r, echo=FALSE}
+sort(round(res2$r[,1],4))%>% kable("latex",booktabs=T) %>% kable_styling(full_width=F) %>% add_header_above(c("Sorted Correlations"=2))
+```
+
+**Simple Poisson Model**
+We develop a simple poission model with **STARS**, **LabelAppeal**, **STARS_I_FLAG**, **Alcohol** and **AcidIndex**. Code to generate the model is shown below. A more expanded model is also included that **Volatile Acidity** and **TotalSulfurDioxide**.   
+
+```{r}
+#Develop a simple Poisson Model
+m1<-glm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,family=poisson,wine)
+m2<-glm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,family=poisson,wine)
+```
+
+As can be seen in the tables below the model results are significant and standard errors low. Variance inflation factors are reasonable - with only label appeal showing slightly high VIF's .
+
+```{r, echo=FALSE}
+#summary of results
+summary(m1)$coefficients %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F) %>% add_header_above(c("Variables"=1,"Coefficient Statistics Model M2"=2))
+summary(m2)$coefficients %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F) %>% add_header_above(c("Variables"=1,"Coefficient Statistics Model M2"=2))
+vif(m1) %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F) 
+```
+
+Shown below are comparison plots of the fitted values compared to the target values. Fitted values have been rounded and then a jitter plot put together for comparison. The redline shows what a perfect fit would like. In other words plotted points along the red diagonal would only be populated. 
+
+```{r, echo=FALSE}
+#comparison of fitted plots
+par(mfrow=c(1,2))
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m1)),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m1")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m2),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m2")
+abline(0,1,lty=2,col="red")
+```
+
+It is clear that model does a very poor job of estimating zero sales based on wine characteristics. Focusing on this a little further plots of the fitted values less than 2 are shown in the model below. 
+
+```{r, echo=FALSE}
+#Histograms of low values
+par(mfrow=c(1,2))
+hist(fitted(m1)[fitted(m1)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m1")
+hist(fitted(m2)[fitted(m2)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m2")
+```
+
+
+**Hurdle Rate Model**
+
+Hurdle rate models are shown below. Hurdle rate models account for the zero portion of the model separately and include two portions of the model. Four different models are developed and include some different variables and different distributional assumptions of the zero hurdle rate model, including poisson and binomial assumptions. 
+
+```{r}
+#develop hurdle rate models
+m1h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,dist = c("poisson"),zero.dist = "binomial",wine)
+
+m2h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",zero.dist="binomial",wine)
+
+m3h<-hurdle(TARGET~as.factor(STARS)+LabelAppeal+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",zero.dist="poisson",wine)
+
+m4h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide+Density,dist="poisson",zero.dist="binomial",wine)
+```
+
+Below are shown plots similar to those shown above regarding fitted values less than 2, to see how the model does for zero sales. It does sem that now a much higher number of wines are expected to have zero or near zero sales. 
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+hist(fitted(m1h)[fitted(m1h)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m1 Hurdle")
+hist(fitted(m2h)[fitted(m2h)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m2 Hurdle")
+```
+
+Jitter plots for the hurdle rate models are shown below comparing the target variable to the model fitted values. The red line shows the ideal fit. The models perform similarly and visually it is hard to see which ones are clearly better but model m3 and model m4 do seem to be better. 
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m1h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m1 Hurdle")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m2h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m2 Hurdle")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m3h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m3 Hurdle")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m4h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m4 Hurdle")
+abline(0,1,lty=2,col="red")
+```
+
+**Zero Inflated Poisson Models** 
+
+Two zero inflated poisson models are shown below.The models utilize the same variables as those in model m1 and model m2. 
+
+```{r}
+#develop ZIP models
+m1zip<-zeroinfl(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,dist = c("poisson"),link = "logit",wine)
+m2zip<-zeroinfl(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",link="logit",wine)
+```
+
+Histograms of values less than 2 in fitted value are shown below. For the zero portion, the results are quite similar to the hurdle rate models. 
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+hist(fitted(m1zip)[fitted(m1zip)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m1 ZIP")
+hist(fitted(m2zip)[fitted(m2zip)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m2 ZIP")
+```
+
+Fitted values compared to the target for the zero inflated poisson models are shown below. The ZIP models do seem to do better in some respects than other models but for example have no sales that reach 8, while some of the hurdle models capture this. Overall, the zip models do seem to make errors that are of lower magnitude. 
+
+```{r}
+par(mfrow=c(1,2))
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m1zip),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m1 ZIP")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m2zip),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m2 ZIP")
+abline(0,1,lty=2,col="red")
+```
+
+**Negative Binomial Models**
+
+Negative bionomial models are shown below. A dispersion factor of 2 is fixed. 
+
+```{r}
+#negative binomial models
+nb1<-glm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex, negative.binomial(2),wine)
+nb2<-glm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide, negative.binomial(2),wine)
+```
+
+Jitter plots for the Negative binomail models are shown below comparing the target variable to the model fitted values. The red line shows the ideal fit. It is hard to tell how much worse the models are however, the small number of zero forecasts are indicative that model can not capture the large number of no sale wines.
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(nb1),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m1 Negative Bin")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(nb2),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m2 Negative Bin")
+abline(0,1,lty=2,col="red")
+```
+
+Finally, a simple linear regression model is developed as a comparison. 
+
+```{r}
+l1<-lm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,wine)
+summary(l1)$coefficients %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F)
+```
+
+Jitter plot of the regression model shows that there are some negative value forecasts as well which is problematic given that we know the output variable to zero or strictly greater than zero. 
+
+```{r, echo=FALSE}
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(l1),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model Linear Regression")
+abline(0,1,lty=2,col="red")
+```
+
+### 4. Select Models (25 Points)
+Decide on the criteria for selecting the best count regression model. Will you select models with slightly worse performance if it makes more sense or is more parsimonious? Discuss why you selected your models.
+For the count regression model, will you use a metric such as AIC, average squared error, etc.? Be sure to explain how you can make inferences from the model, and discuss other relevant model output. If you like the multiple linear regression model the best, please say why. However, you must select a count regression model for model deployment. Using the training data set, evaluate the performance of the count regression model. Make predictions using the evaluation data set.
+
+**Solution**
+
+
+Shown below are plots showing the Root Mean Squared Error (RMSE) and Mean Average Error (MAE) for all the models estimated in the analysis. The measures are calculated using functions in the **DESCTOOLS** package and are evaluated comparing the fitted values to the actual **TARGET** variable. 
+
+```{r, echo=FALSE}
+#Mean Average Error
+mae_table<-data.frame("m1h",MAE(round(fitted(m1h)),wine$TARGET))
+names(mae_table)<-c("Model","MAE")
+b<-data.frame("m2h",MAE(round(fitted(m2h)),wine$TARGET))
+names(b)<-c("Model","MAE")
+c<-data.frame("m3h",MAE(round(fitted(m3h)),wine$TARGET))
+names(c)<-c("Model","MAE")
+d<-data.frame("m4h",MAE(round(fitted(m4h)),wine$TARGET))
+names(d)<-c("Model","MAE")
+f<-data.frame("m1",MAE(round(fitted(m1)),wine$TARGET))
+names(f)<-c("Model","MAE")
+g<-data.frame("m2",MAE(round(fitted(m2)),wine$TARGET))
+names(g)<-c("Model","MAE")
+h<-data.frame("m1zip",MAE(round(fitted(m1zip)),wine$TARGET))
+names(h)<-c("Model","MAE")
+i<-data.frame("m2zip",MAE(round(fitted(m2zip)),wine$TARGET))
+names(i)<-c("Model","MAE")
+j<-data.frame("l1",MAE(round(fitted(l1)),wine$TARGET))
+names(j)<-c("Model","MAE")
+k<-data.frame("nb1",MAE(round(fitted(nb1)),wine$TARGET))
+names(k)<-c("Model","MAE")
+l<-data.frame("nb2",MAE(round(fitted(nb2)),wine$TARGET))
+names(l)<-c("Model","MAE")
+
+
+mae_table<-rbind(mae_table,b,c,d,f,g,h,i,j,k,l)
+mae_table<-arrange(mae_table,desc(MAE))
+
+#RMSE table
+rmse_table<-data.frame("m1h",RMSE(round(fitted(m1h)),wine$TARGET))
+names(rmse_table)<-c("Model","RMSE")
+b<-data.frame("m2h",RMSE(round(fitted(m2h)),wine$TARGET))
+names(b)<-c("Model","RMSE")
+c<-data.frame("m3h",RMSE(round(fitted(m3h)),wine$TARGET))
+names(c)<-c("Model","RMSE")
+d<-data.frame("m4h",RMSE(round(fitted(m4h)),wine$TARGET))
+names(d)<-c("Model","RMSE")
+f<-data.frame("m1",RMSE(round(fitted(m1)),wine$TARGET))
+names(f)<-c("Model","RMSE")
+g<-data.frame("m2",RMSE(round(fitted(m2)),wine$TARGET))
+names(g)<-c("Model","RMSE")
+h<-data.frame("m1zip",RMSE(round(fitted(m1zip)),wine$TARGET))
+names(h)<-c("Model","RMSE")
+i<-data.frame("m2zip",RMSE(round(fitted(m2zip)),wine$TARGET))
+names(i)<-c("Model","RMSE")
+j<-data.frame("l1",RMSE(round(fitted(l1)),wine$TARGET))
+names(j)<-c("Model","RMSE")
+k<-data.frame("nb1",RMSE(round(fitted(nb1)),wine$TARGET))
+names(k)<-c("Model","RMSE")
+l<-data.frame("nb2",RMSE(round(fitted(nb2)),wine$TARGET))
+names(l)<-c("Model","RMSE")
+
+rmse_table<-rbind(rmse_table,b,c,d,f,g,h,i,j,k,l)
+rmse_table<-arrange(rmse_table,desc(RMSE))
+```
+
+The analysis does indicate that model m2zip, m1zip and m4h are the most promising models. If we had to select a single model then it does seem that model m2zip performs the best.     
+
+
+```{r, echo=FALSE}
+par(mfrow=c(1,2))
+plot(mae_table$MAE,xaxt="n",xlab="Models",type='b',ylab="MAE",pch=21,bg="orange",main="MAE",cex.axis=0.8)
+axis(1,at=seq(1,11,1),labels=mae_table$Model,cex.axis=0.75)
+
+plot(rmse_table$RMSE,xaxt="n",xlab="Models",type='b',ylab="RMSE",pch=21,bg="red",main="RMSE",cex.axis=0.8)
+axis(1,at=seq(1,11,1),labels=rmse_table$Model,cex.axis=0.75)
+```
+
+### Appendix
+
+
+```{r, eval=FALSE}
+library(kableExtra)
+library(knitr)
+library(ggplot2)
+library(gridExtra)
+library(tidyr)
+library(dplyr)
+library(robustbase)
+library(leaps)
+library(DescTools)
+library(nlme)
+library(tinytex)
+library(Hmisc)
+library(reshape2)
+library(pscl)
+library(MASS)
+```
+
+**Question 1**
+
+```{r, eval=FALSE}
+p1<-ggplot(wine,aes(TARGET))+geom_bar(color="orange", fill="orange", alpha=0.5)
+p1
+```
+
+```{r, eval=FALSE}
+#a=data.frame()
+round(summarise_all(wine[,2:16],mean,na.rm=TRUE),2) %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down"))%>% add_header_above(c("Means"=15)) 
+round(summarise_all(wine[,2:16],median,na.rm=TRUE),2) %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down"))%>% add_header_above(c("Medians"=15)) 
+```
+
+
+```{r, eval=FALSE}
+round(summarise_all(wine[,2:16],mean,na.rm=TRUE),2) %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down"))%>% add_header_above(c("Means"=15)) 
+round(summarise_all(wine[,2:16],median,na.rm=TRUE),2) %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down"))%>% add_header_above(c("Medians"=15)) 
+```
+
+
+```{r, eval=FALSE}
+#negative values
+negative_vals<-as.data.frame(table(negative=wine$FixedAcidity<0, useNA="no"))
+b<-as.data.frame(table(negative=wine$VolatileAcidity<0, useNA="no"))
+c<-as.data.frame(table(negative=wine$CitricAcid<0, useNA="no"))
+d<-as.data.frame(table(negative=wine$ResidualSugar<0, useNA="no"))
+e<-as.data.frame(table(negative=wine$Chlorides<0, useNA="no"))
+f<-as.data.frame(table(negative=wine$FreeSulfurDioxide<0, useNA="no"))
+g<-as.data.frame(table(negative=wine$TotalSulfurDioxide<0, useNA="no"))
+h<-as.data.frame(table(negative=wine$Sulphates<0, useNA="no"))
+i<-as.data.frame(table(negative=wine$Alcohol<0, useNA="no"))
+
+#merge data frames
+negative_vals<-merge(negative_vals,b,by="negative")
+negative_vals<-merge(negative_vals,c,by="negative")
+negative_vals<-merge(negative_vals,d,by="negative")
+negative_vals<-merge(negative_vals,e,by="negative")
+negative_vals<-merge(negative_vals,f,by="negative")
+negative_vals<-merge(negative_vals,g,by="negative")
+negative_vals<-merge(negative_vals,h,by="negative")
+negative_vals<-merge(negative_vals,i,by="negative")
+
+names(negative_vals)<-c("Negative","FixedAcidity","VolatileAcidity","CitricAcid","ResidualSugar","Chlorides","FreeSulphurdioxide","TotalSulphurdioxide","Sulphates","Alcohol")
+
+negative_vals %>% kable("latex", booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down")) %>% add_header_above(c("Category "=1,"Counts of Negative Values"=9))
+round(prop.table(as.matrix(negative_vals[,2:10]),2),3) %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F, latex_options=c("scale_down")) %>% add_header_above(c("Proportions of Negative Values"=9))
+#delete temp tables
+rm(b,c,d,e,f,g,h,i)
+```
+
+
+
+```{r, eval=FALSE}
+## put histograms on the diagonal
+panel.hist <- function(x, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(usr[1:2], 0, 1.5) )
+    h <- hist(x, plot = FALSE)
+    breaks <- h$breaks; nB <- length(breaks)
+    y <- h$counts; y <- y/max(y)
+    rect(breaks[-nB], 0, breaks[-1], y, ...)
+}
+
+pairs(TARGET~abs(FixedAcidity)+abs(VolatileAcidity)+pH+abs(CitricAcid)+abs(ResidualSugar)+abs(Chlorides), diag.panel=panel.hist,data=wine, cex=0.3, col="blue", lower.panel=NULL, label=c("TARGET","FixedAcidity","VolatileAcidity","pH","CriticAcid","ResidualSugar","Chlorides"), cex.labels=0.5, font.labels=0.5)
+```
+
+```{r, eval=FALSE}
+pairs(jitter(TARGET,amount=0.1)~abs(FreeSulfurDioxide)+abs(TotalSulfurDioxide)+Density+abs(Sulphates)+abs(Alcohol),data=wine, cex=0.4, col="blue", lower.panel=NULL, label=c("TARGET","Free Sulphr Oxide","Total Sulphur Oxide", "Density","Sulphates", "Alchol"), diag.panel=panel.hist, cex.labels=0.5, font.labels=0.5)
+```
+
+```{r, eval=FALSE}
+pairs(jitter(TARGET,amount=0.1)~jitter(LabelAppeal,amount=0.2)+jitter(AcidIndex, amount=0.2)+jitter(STARS,amount=0.2),data=wine, cex=0.4, col="Orange", lower.panel=NULL, label=c("TARGET","LabelAppeal","AcidIndex","Stars"))
+```
+
+```{r, eval=FALSE}
+p2<-ggplot(wine,aes(LabelAppeal))+geom_bar(color="orange", fill="orange", alpha=0.5)
+p3<-ggplot(wine,aes(AcidIndex))+geom_bar(color="orange", fill="orange", alpha=0.5)
+p4<-ggplot(wine,aes(STARS))+geom_bar(color="orange", fill="orange", alpha=0.5)
+grid.arrange(p2,p3,p4,nrow=1)
+```
+
+**Question 2**
+
+```{r, eval=FALSE}
+#deal with negative values
+#Fixed Acidity
+wine$F_ACID_N_FLAG<-0
+wine$F_ACID_N_FLAG[wine$FixedAcidity<0]<-1
+wine<-wine %>% mutate(FixedAcidity=abs(FixedAcidity))
+#Volatile Acidity
+wine$V_ACID_N_FLAG<-0
+wine$V_ACID_N_FLAG[wine$VolatileAcidity<0]<-1
+wine<-wine %>% mutate(VolatileAcidity=abs(VolatileAcidity))
+#Citric Acid
+wine$C_ACID_N_FLAG<-0
+wine$C_ACID_N_FLAG[wine$CitricAcid<0]<-1
+wine<-wine %>% mutate(CitricAcid=abs(CitricAcid))
+#Residual Sugar
+wine$Rsugar_N_FLAG<-0
+wine$Rsugar_N_FLAG[wine$ResidualSugar<0]<-1
+wine<-wine %>% mutate(ResidualSugar=abs(ResidualSugar))
+#Chlorides
+wine$Chl_N_FLAG<-0
+wine$Chl_N_FLAG[wine$Chlorides<0]<-1
+wine<-wine %>% mutate(Chlorides=abs(Chlorides))
+#Freesulphur
+wine$free_sox_N_FLAG<-0
+wine$free_sox_N_FLAG[wine$FreeSulfurDioxide<0]<-1
+wine<-wine %>% mutate(FreeSulfurDioxide=abs(FreeSulfurDioxide))
+#Totalsulphur
+wine$tot_sox_N_FLAG<-0
+wine$tot_sox_N_FLAG[wine$TotalSulfurDioxide<0]<-1
+wine<-wine %>% mutate(TotalSulfurDioxide=abs(TotalSulfurDioxide))
+#Sulphates
+wine$sulphates_N_FLAG<-0
+wine$sulphates_N_FLAG[wine$Sulphates<0]<-1
+wine<-wine %>% mutate(Sulphates=abs(Sulphates))
+#Alcohol
+wine$alcohol_N_FLAG<-0
+wine$alcohol_N_FLAG[wine$Alcohol<0]<-1
+wine<-wine %>% mutate(Alcohol=abs(Alcohol))
+```
+
+```{r, eval=FALSE}
+#impute missing variables
+#impute ResdiualSugar
+wine$ResidualSugar_I_FLAG<-0
+wine$ResidualSugar_I_FLAG[is.na(wine$ResidualSugar)]<-1
+wine$ResidualSugar[is.na(wine$ResidualSugar)]<-median(wine$ResidualSugar,na.omit(TRUE))
+#Chlorides
+wine$Chlorides_I_FLAG<-0
+wine$Chlorides_I_FLAG[is.na(wine$Chlorides)]<-1
+wine$Chlorides[is.na(wine$Chlorides)]<-median(wine$Chlorides,na.omit(TRUE))
+#Free SulfurDioxide
+wine$free_sox_I_FLAG<-0
+wine$free_sox_I_FLAG[is.na(wine$FreeSulfurDioxide)]<-1
+wine$FreeSulfurDioxide[is.na(wine$FreeSulfurDioxide)]<-median(wine$FreeSulfurDioxide,na.omit(TRUE))
+#Total SulfurDioxide
+wine$tot_sox_I_FLAG<-0
+wine$tot_sox_I_FLAG[is.na(wine$TotalSulfurDioxide)]<-1
+wine$TotalSulfurDioxide[is.na(wine$TotalSulfurDioxide)]<-median(wine$TotalSulfurDioxide,na.omit(TRUE))
+#pH
+wine$ph_I_FLAG<-0
+wine$ph_I_FLAG[is.na(wine$pH)]<-1
+wine$pH[is.na(wine$pH)]<-median(wine$pH,na.omit(TRUE))
+#Sulphates
+wine$sulphates_I_FLAG<-0
+wine$sulphates_I_FLAG[is.na(wine$Sulphates)]<-1
+wine$Sulphates[is.na(wine$Sulphates)]<-median(wine$Sulphates,na.omit(TRUE))
+#Alcohol
+wine$alcohol_I_FLAG<-0
+wine$alcohol_I_FLAG[is.na(wine$Alcohol)]<-1
+wine$Alcohol[is.na(wine$Alcohol)]<-median(wine$Alcohol,na.omit(TRUE))
+```
+
+
+```{r, eval=FALSE}
+#plot of Stars 
+par(mfrow=c(1,2))
+hist(wine$TARGET[!is.na(wine$STARS)],breaks=20,freq=TRUE, col="blue",xlab="TARGET", main="STARS Not Missing")
+hist(wine$TARGET[is.na(wine$STARS)],breaks=20,freq=TRUE, col="blue",xlab="TARGET", main="STARS Missing")
+par(mfrow=c(1,1))
+```
+
+```{r, eval=FALSE}
+#STARS
+wine$stars_I_FLAG<-0
+wine$stars_I_FLAG[is.na(wine$STARS)]<-1
+#median TARGET for NA / Missing stars
+median(wine$TARGET[is.na(wine$STARS)])
+#Impute median for missing stars
+wine$STARS[is.na(wine$STARS)]<-median(wine$STARS[wine$TARGET==0],na.omit(TRUE))
+```
+
+**Question 3**
+
+```{r,eval=FALSE}
+# Get upper triangle of the correlation matrix
+get_upper_tri <- function(cormat){
+  cormat[lower.tri(cormat)]<- NA
+  return(cormat)
+}
+
+#get correlations
+res2<-rcorr(as.matrix(wine[,2:33]))
+#extract upper triangle of correlations
+res2_corr<-get_upper_tri(res2$r)
+melted_res2 <- melt(res2_corr, na.rm = TRUE)
+
+
+#correlation plot
+ggplot(data = melted_res2, aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation")+theme(axis.text.x = element_text(angle = 90,vjust = 0.5, size = 10, hjust = 1))+coord_fixed()+labs(title="Correlation Plot")
+
+```
+
+```{r, eval=FALSE}
+sort(round(res2$r[,1],4))%>% kable("latex",booktabs=T) %>% kable_styling(full_width=F) %>% add_header_above(c("Sorted Correlations"=2))
+```
+
+```{r, eval=FALSE}
+#Develop a simple Poisson Model
+m1<-glm(TARGET~STARS+LabelAppeal+stars_I_FLAG+Alcohol+AcidIndex,family=poisson,wine)
+m2<-glm(TARGET~STARS+LabelAppeal+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,family=poisson,wine)
+#summary of results
+summary(m1)$coefficients%>% kable("latex",booktabs=T) %>% kable_styling(full_width=F)
+summary(m2)$coefficients%>% kable("latex",booktabs=T) %>% kable_styling(full_width=F)
+```
+
+```{r, eval=FALSE}
+#comparison of fitted plots
+par(mfrow=c(1,2))
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m1)),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m1")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m2),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m2")
+abline(0,1,lty=2,col="red")
+#Histograms of low values
+hist(fitted(m1)[fitted(m1)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m1")
+hist(fitted(m2)[fitted(m2)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m2")
+```
+
+
+```{r, eval=FALSE}
+#develop hurdle rate models
+m1h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,dist = c("poisson"),zero.dist = "binomial",wine)
+
+m2h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",zero.dist="binomial",wine)
+
+m3h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",zero.dist="binomial",wine)
+
+m4h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",zero.dist="poisson",wine)
+
+m5h<-hurdle(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide+Density,dist="poisson",zero.dist="binomial",wine)
+```
+
+```{r, eval=FALSE}
+hist(fitted(m1h)[fitted(m1h)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m1 Hurdle")
+hist(fitted(m2h)[fitted(m2h)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m2 Hurdle")
+
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m1h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m1 Hurdle")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m2h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m2 Hurdle")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m3h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m3 Hurdle")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m4h),0),amount=0.1),cex=0.5,col="blue",xlab="TARGET",ylab="Fitted Values", main="Model m4 Hurdle")
+abline(0,1,lty=2,col="red")
+```
+
+```{r, eval=FALSE}
+#develop ZIP models
+m1zip<-zeroinfl(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,dist = c("poisson"),link = "logit",wine)
+m2zip<-zeroinfl(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide,dist="poisson",link="logit",wine)
+
+hist(fitted(m1zip)[fitted(m1zip)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m1 Zip")
+hist(fitted(m2zip)[fitted(m2zip)<2],breaks=20,col="orange",xlab="Fitted Values",main="Model m2 Hurdle")
+
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m1zip),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m1 ZIP")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(m2zip),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m2 ZIP")
+abline(0,1,lty=2,col="red")
+```
+
+```{r, eval=FALSE}
+#negative binomial models
+nb1<-glm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex, negative.binomial(2),wine)
+nb2<-glm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex+VolatileAcidity+TotalSulfurDioxide, negative.binomial(2),wine)
+par(mfrow=c(1,2))
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(nb1),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model Negative Bin")
+abline(0,1,lty=2,col="red")
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(nb2),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model m2 Negative Bin")
+abline(0,1,lty=2,col="red")
+```
+
+```{r, eval=FALSE}
+l1<-lm(TARGET~as.factor(STARS)+as.factor(LabelAppeal)+stars_I_FLAG+Alcohol+AcidIndex,wine)
+summary(l1)$coefficients %>% kable("latex",booktabs=T) %>% kable_styling(full_width=F)
+plot(jitter(wine$TARGET,amount=0.1),jitter(round(fitted(l1),0),amount=0.1),cex=0.5,col="orange",xlab="TARGET",ylab="Fitted Values", main="Model Linear Regression")
+abline(0,1,lty=2,col="red")
+```
+
+**Question 4**
+
+```{r, eval=FALSE}
+par(mfrow=c(2,2))
+plot(m1h$fitted.values,m1h$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m1h")
+plot(m2h$fitted.values,m2h$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m2h")
+plot(m3h$fitted.values,m3h$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m3h")
+plot(m4h$fitted.values,m4h$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m4h")
+```
+
+```{r, eval=FALSE}
+par(mfrow=c(2,2))
+plot(nb1$fitted.values,nb1$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model nb1")
+plot(nb2$fitted.values,nb2$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model nb2")
+plot(m1$fitted.values,m1$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m1")
+plot(m2$fitted.values,m2$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m2")
+```
+
+```{r, eval=FALSE}
+par(mfrow=c(2,2))
+plot(l1$fitted.values,l1$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model nb1")
+plot(m1zip$fitted.values,m1zip$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model nb2")
+plot(m2zip$fitted.values,m2zip$residuals,cex=0.5, xlab="Fitted Values", ylab="Residuals", col="blue", main="Model m1")
+```
+
+
+```{r, eval=FALSE}
+#Mean Average Error
+mae_table<-data.frame("m1h",MAE(round(fitted(m1h)),wine$TARGET))
+names(mae_table)<-c("Model","MAE")
+b<-data.frame("m2h",MAE(round(fitted(m2h)),wine$TARGET))
+names(b)<-c("Model","MAE")
+c<-data.frame("m3h",MAE(round(fitted(m3h)),wine$TARGET))
+names(c)<-c("Model","MAE")
+d<-data.frame("m4h",MAE(round(fitted(m4h)),wine$TARGET))
+names(d)<-c("Model","MAE")
+f<-data.frame("m1",MAE(round(fitted(m1)),wine$TARGET))
+names(f)<-c("Model","MAE")
+g<-data.frame("m2",MAE(round(fitted(m2)),wine$TARGET))
+names(g)<-c("Model","MAE")
+h<-data.frame("m1zip",MAE(round(fitted(m1zip)),wine$TARGET))
+names(h)<-c("Model","MAE")
+i<-data.frame("m2zip",MAE(round(fitted(m2zip)),wine$TARGET))
+names(i)<-c("Model","MAE")
+j<-data.frame("l1",MAE(round(fitted(l1)),wine$TARGET))
+names(j)<-c("Model","MAE")
+k<-data.frame("nb1",MAE(round(fitted(nb1)),wine$TARGET))
+names(k)<-c("Model","MAE")
+l<-data.frame("nb2",MAE(round(fitted(nb2)),wine$TARGET))
+names(l)<-c("Model","MAE")
+
+
+mae_table<-rbind(mae_table,b,c,d,f,g,h,i,j,k,l)
+mae_table<-arrange(mae_table,desc(MAE))
+
+#RMSE table
+rmse_table<-data.frame("m1h",RMSE(round(fitted(m1h)),wine$TARGET))
+names(rmse_table)<-c("Model","RMSE")
+b<-data.frame("m2h",RMSE(round(fitted(m2h)),wine$TARGET))
+names(b)<-c("Model","RMSE")
+c<-data.frame("m3h",RMSE(round(fitted(m3h)),wine$TARGET))
+names(c)<-c("Model","RMSE")
+d<-data.frame("m4h",RMSE(round(fitted(m4h)),wine$TARGET))
+names(d)<-c("Model","RMSE")
+f<-data.frame("m1",RMSE(round(fitted(m1)),wine$TARGET))
+names(f)<-c("Model","RMSE")
+g<-data.frame("m2",RMSE(round(fitted(m2)),wine$TARGET))
+names(g)<-c("Model","RMSE")
+h<-data.frame("m1zip",RMSE(round(fitted(m1zip)),wine$TARGET))
+names(h)<-c("Model","RMSE")
+i<-data.frame("m2zip",RMSE(round(fitted(m2zip)),wine$TARGET))
+names(i)<-c("Model","RMSE")
+j<-data.frame("l1",RMSE(round(fitted(l1)),wine$TARGET))
+names(j)<-c("Model","RMSE")
+k<-data.frame("nb1",RMSE(round(fitted(nb1)),wine$TARGET))
+names(k)<-c("Model","RMSE")
+l<-data.frame("nb2",RMSE(round(fitted(nb2)),wine$TARGET))
+names(l)<-c("Model","RMSE")
+
+rmse_table<-rbind(rmse_table,b,c,d,f,g,h,i,j,k,l)
+rmse_table<-arrange(rmse_table,desc(RMSE))
+```
+
+```{r, eval=FALSE}
+par(mfrow=c(1,2))
+plot(mae_table$MAE,xaxt="n",xlab="Models",type='b',ylab="MAE",pch=21,bg="orange",main="MAE",cex.axis=0.8)
+axis(1,at=seq(1,11,1),labels=mae_table$Model,cex.axis=0.75)
+
+plot(rmse_table$RMSE,xaxt="n",xlab="Models",type='b',ylab="RMSE",pch=21,bg="red",main="RMSE",cex.axis=0.8)
+axis(1,at=seq(1,11,1),labels=rmse_table$Model,cex.axis=0.75)
+```
+
+
