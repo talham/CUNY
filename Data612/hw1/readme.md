@@ -7,7 +7,9 @@ Users were selected at random for inclusion. All selected users had rated at lea
 The data are contained in the files links.csv, movies.csv, ratings.csv and tags.csv. 
 
 ## Project 1
-c> We’ll first look at just raw averages across all (training dataset) users. We’ll then account for “bias” by normalizing across users and across items.
+> We’ll first look at just raw averages across all (training dataset) users. We’ll then account for “bias” by normalizing across users and across items.
+
+This dataset and this analysis could ultimately be used to develop a movie recommendation engine. In order to develop a movie recommendation we need some benchmarks and ways to measure and predict future ratings. The goal of this assignment is to develop simple benchmarks that can be used to compare model performance. 
 
 As a first step I used and downloaded the above dataset. See R code in the folder. 
 
