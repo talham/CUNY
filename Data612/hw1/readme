@@ -12,7 +12,7 @@ The data are contained in the files links.csv, movies.csv, ratings.csv and tags.
 
 As a first step I used and downloaded the above dataset. See R code on the attached. 
 
-![](images/top10movies.png)
+![](/images/top10movies.png)
 
 
 ![](images/rating_hist.png)
