@@ -21,10 +21,14 @@ We conduct a number of summary analysis on this dataset. In particular, we devel
 
 #### 1. Select a subsample of the dataset
 #### 2. Develop baseline predictor by accounting for bias across users and across movies
-#### 3. Develop Training and Test sets (Calculate RMSE across training=75%
+#### 3. Develop Training and Test sets (training=75%, test=25%)
+#### 4. Conduct Baseline prediction and average prediction
+#### 5. Calculate RMSE across different prediction
 
+The histogram below shows a comparison of the ratings from users relative the baseline predictor.  
 ![](images/rating_hist.png)
 
+After the calculation of the baseline predictor which incorporates biases from users and specific movies and includes (adds) these biases to the average prediction. As expected RMSE for both test and training set decline by over 30%. In both cases, test and training set performance was quite similar as the prediction approaches were very general and had no opportunities for overfitting. 
 
 ![](images/summary.png)
 
