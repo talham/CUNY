@@ -62,19 +62,19 @@ Finally, we note that RMSE across Item-Item filtering is much lower than User-Us
 #### 6. Qualitatively evaluating the recommendations
 
 While the RMSE calculation is instructive it does not give us a sense of how good the recommendations are from an intuitive perspective. As a result we select two users.
-** User 290** is a user that has the least number of movie ratings (in the top - 100 of movie raters). **User 270** is a user that has the top 5 number of ratings in the 
+**User 290** is a user that has the least number of movie ratings (in the top - 100 of movie raters). **User 270** is a user that has the top 5 number of ratings in the 
 (in the top-100 of movie raters). The table below shows the top-10 movie ratings of User 290. It is clear the user likes sci-fi movies, action and adventure movies.  
 
 ![](images/user290_actual.png)
 
 Do the recommendations make sense? Lets evaluate these below: 
 
-** User Based Collaborative Filtering**
+**User Based Collaborative Filtering**
 
 ![](images/user290_user.png)
 
 
-** Item Based Collaborative Filtering**
+**Item Based Collaborative Filtering**
 
 ![](images/user290_item.png)
 
