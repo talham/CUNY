@@ -110,7 +110,7 @@ The figure below shows the distribution of the reviews by users. As can be seen 
 ![](images/user_reviews.png) 
 
 
-#### 3. Setting up the Social Network Analysis 
+#### 3. Setting up the Recommendation Engine 
 
 ##### 3.1 Categorizing Regional Cusines
 In addition to understanding the relationships between reviewers and the food industry businesses, I developed categories cusineses by region. It would be interesting 
@@ -138,22 +138,13 @@ Finally, the all the reviews and the restaurants are merged together for final a
 has many reviewers, and each row in the dataset represents the rating provided by reviewer / patron of the restaurant. 
 
 
-#### 4.0 Conducting Social Network Analysis 
+#### 4.0 Evaluating the Recommedations 
 
-Looking at some of the prolific reviewers reveals some interesting patterns. Certain restuarants as expected are extremely popular,
-and have reviews across the board from a number of the reviewers. 
-
-![](images/cliques.png)
-
-we also calculate some of the centrality metrics for the bi-modal graph after projecting it to a uni-modal graph. 
-
-![](images/between_centrality.png)
 
 #### 5. Next Steps
 
 The are a number of steps that can be taken here that can further improve the analysis further including: 
 - Topical analysis of the textual reviews; For example developing topic models to understand the different topics covered by reviews and the review ratings
-- Developing a recommendation engine using the review and user profiles to levarge ratings along with the business data
 - Incorporating labelled image data into recommendation algorithms along with potential topic models to develop better recommendations
 
 
