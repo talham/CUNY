@@ -1,4 +1,4 @@
-# The Yelp Dataset - A graphical Analysis
+# The Yelp Dataset - Developing a Recommendation Engine
 
 
 ### Final Project Data 620
@@ -112,9 +112,23 @@ The figure below shows the distribution of the reviews by users. As can be seen 
 
 #### 3. Setting up the Recommendation Engine 
 
-##### 3.1 Conducting the 
+##### 3.1 Conduct the Recommendation Predictions
+We conduct 3 different algorithm predictions using the surprise package. SVD- with 5 latent factors, estimated over 25 epochs. 
+Two algorithms for K-Nearest Neighbors (baseline and mean) for a maximal neighbor prediction of 20, with similiarities calculated
+using cosine similarity.  
 
-##### 3.2 Categorizing Regional Cusines
+##### 3.2 Evaluating Performance
+
+We evaluate the performance of the three algorithms we used, SVD, KNN Baseline and KNN with Means. Overall the SVD seems to perform better
+based on the testing conducted. 
+
+![](images/evaluation_rmse.png)  
+
+##### 3.3 Nearest Neighbor Prediction
+Using the nearest neighbor algorithms we predict which restaurants are most similar. One of the most popular restaurants is **Pizzeria Bianco**. 
+The algorithms suggest that **Celsius Sushi Bar** and **PotBelly Sandwich shop** are most similar. 
+
+##### 3.4 Categorizing Regional Cusines
 In addition to understanding the relationships between reviewers and the food industry businesses, I developed categories cusineses by region. It would be interesting 
 to see what the relationship between the different types of restaurants and reviewers is. In order to do that I had to develop a standard category. As can be seen 
 in the data snap shot below the yelp restaurant data categories are not standard. 
@@ -134,18 +148,14 @@ Most of the businesses were assigned to a category, although not all fit neatly 
 ![](images/region_cat_top5.png) 
 
 
-##### 3.2 Developing the Final Dataset
-
-Finally, the all the reviews and the restaurants are merged together for final analysis. The final dataset consists of **1.127 million** observations split across **7364** restaurants, this is because each restaurant
-has many reviewers, and each row in the dataset represents the rating provided by reviewer / patron of the restaurant. 
 
 
-#### 4.0 Evaluating the Recommedations 
 
-
-#### 5. Next Steps
+#### 4. Next Steps
 
 The are a number of steps that can be taken here that can further improve the analysis further including: 
+- Incorporate restaurant food category along with other metrics such as geographic location into the consideration
+- Incorporate a novelty factor 
 - Topical analysis of the textual reviews; For example developing topic models to understand the different topics covered by reviews and the review ratings
 - Incorporating labelled image data into recommendation algorithms along with potential topic models to develop better recommendations
 
