@@ -112,7 +112,9 @@ The figure below shows the distribution of the reviews by users. As can be seen 
 
 #### 3. Setting up the Recommendation Engine 
 
-##### 3.1 Categorizing Regional Cusines
+##### 3.1 Conducting the 
+
+##### 3.2 Categorizing Regional Cusines
 In addition to understanding the relationships between reviewers and the food industry businesses, I developed categories cusineses by region. It would be interesting 
 to see what the relationship between the different types of restaurants and reviewers is. In order to do that I had to develop a standard category. As can be seen 
 in the data snap shot below the yelp restaurant data categories are not standard. 
